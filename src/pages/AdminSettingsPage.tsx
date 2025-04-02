@@ -93,16 +93,27 @@ export default function AdminSettingsPage() {
         getAllRooms(),
         getProblemBalloonMaps(),
       ]);
-      setAllSettings(Array.isArray(settingsData) ? settingsData : []);
+
+      const settingsArray = Array.isArray(settingsData) ? settingsData : [settingsData];
+      setAllSettings(settingsArray);
+
       setActiveSettings(activeData);
-      setRooms(Array.isArray(roomsData) ? roomsData : []);
-      setMaps(Array.isArray(mapsData) ? mapsData : []);
-      if (activeData) {
-        setTeams(Array.isArray(activeData.teams) ? activeData.teams : []);
+
+      const roomsArray = Array.isArray(roomsData) ? roomsData : [];
+      setRooms(roomsArray);
+
+      const mapsArray = Array.isArray(mapsData) ? mapsData : [];
+      setMaps(mapsArray);
+
+      if (activeData && Array.isArray(activeData.teams)) {
+        setTeams(activeData.teams);
+      } else {
+        setTeams([]);
       }
     } catch (error) {
       console.error('Error loading data:', error);
       setAllSettings([]);
+      setActiveSettings(null);
       setRooms([]);
       setMaps([]);
       setTeams([]);
@@ -335,6 +346,19 @@ export default function AdminSettingsPage() {
   };
 
   const renderSettingsForm = (settings: AdminSettings) => {
+    if (!settings) {
+      return (
+        <Paper sx={{ p: 2, mb: 2 }}>
+          <Typography variant="h6" gutterBottom>
+            No Active Settings
+          </Typography>
+          <Typography color="text.secondary">
+            Please create or select settings to manage.
+          </Typography>
+        </Paper>
+      );
+    }
+
     const isEditing = editingSettings?.id === settings.id;
     const currentSettings = isEditing ? editingSettings : settings;
 
@@ -348,7 +372,7 @@ export default function AdminSettingsPage() {
             <TextField
               fullWidth
               label="Admin Username"
-              value={currentSettings.adminUsername}
+              value={currentSettings.adminUsername || ''}
               onChange={(e) => handleSettingsChange(currentSettings, 'adminUsername', e.target.value)}
               disabled={!isEditing}
             />
@@ -357,7 +381,7 @@ export default function AdminSettingsPage() {
             <TextField
               fullWidth
               label="Contest ID"
-              value={currentSettings.contestId}
+              value={currentSettings.contestId || ''}
               onChange={(e) => handleSettingsChange(currentSettings, 'contestId', e.target.value)}
               disabled={!isEditing}
             />
@@ -385,7 +409,7 @@ export default function AdminSettingsPage() {
             <FormControlLabel
               control={
                 <Switch
-                  checked={currentSettings.isEnabled}
+                  checked={currentSettings.isEnabled || false}
                   onChange={(e) => handleSettingsChange(currentSettings, 'isEnabled', e.target.checked)}
                   disabled={!isEditing}
                 />

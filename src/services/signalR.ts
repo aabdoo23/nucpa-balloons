@@ -46,8 +46,8 @@ class SignalRService {
         this.reconnectAttempts++;
       });
 
-      this.connection.onreconnected((connectionId?: string) => {
-        console.log('SignalR reconnected with connection ID:', connectionId);
+      this.connection.onreconnected(() => {
+        console.log('SignalR reconnected');
         this.reconnectAttempts = 0;
       });
 
@@ -60,7 +60,7 @@ class SignalRService {
       });
 
       await this.connection.start();
-      console.log('SignalR connection started successfully with ID:', this.connection.connectionId);
+      console.log('SignalR connection started successfully');
     } catch (error) {
       console.error('Error starting SignalR connection:', error);
       this.stopConnection();
@@ -88,7 +88,6 @@ class SignalRService {
 
     console.log('Registering ReceiveBalloonUpdates callback...');
     this.connection.on('ReceiveBalloonUpdates', (rawUpdates: any) => {
-      console.log('Raw balloon updates received:', rawUpdates);
       
       let updates: RawBalloonUpdates;
       
@@ -96,7 +95,6 @@ class SignalRService {
       if (rawUpdates.$values) {
         // If we receive a single array of balloons
         const balloons = rawUpdates.$values;
-        console.log('Received balloons array:', balloons);
         updates = {
           pending: balloons.filter((b: any) => b.status === 'Pending' || b.status === 0),
           readyForPickup: balloons.filter((b: any) => b.status === 'ReadyForPickup' || b.status === 1),
@@ -105,7 +103,6 @@ class SignalRService {
         };
       } else if (Array.isArray(rawUpdates)) {
         // If we receive just an array
-        console.log('Received direct array:', rawUpdates);
         updates = {
           pending: rawUpdates.filter((b: any) => b.status === 'Pending' || b.status === 0),
           readyForPickup: rawUpdates.filter((b: any) => b.status === 'ReadyForPickup' || b.status === 1),
@@ -114,13 +111,15 @@ class SignalRService {
         };
       } else {
         // If we receive already categorized data
-        console.log('Received categorized data:', rawUpdates);
-        updates = rawUpdates;
+        updates = {
+          pending: rawUpdates.pending || rawUpdates.Pending || [],
+          readyForPickup: rawUpdates.readyForPickup || rawUpdates.ReadyForPickup || [],
+          pickedUp: rawUpdates.pickedUp || rawUpdates.PickedUp || [],
+          delivered: rawUpdates.delivered || rawUpdates.Delivered || []
+        };
       }
 
-      console.log('Processed updates before normalization:', updates);
       const normalizedUpdates = this.normalizeUpdates(updates);
-      console.log('Normalized updates:', normalizedUpdates);
       callback(normalizedUpdates);
     });
     console.log('ReceiveBalloonUpdates callback registered');
@@ -134,9 +133,7 @@ class SignalRService {
 
     console.log('Registering BalloonStatusChanged callback...');
     this.connection.on('BalloonStatusChanged', (rawUpdates: RawBalloonUpdates) => {
-      console.log('Raw balloon status change received:', rawUpdates);
       const normalizedUpdates = this.normalizeUpdates(rawUpdates);
-      console.log('Normalized status updates:', normalizedUpdates);
       callback(normalizedUpdates);
     });
     console.log('BalloonStatusChanged callback registered');

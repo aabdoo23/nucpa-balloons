@@ -1,12 +1,15 @@
 import {
-  ListItem,
-  ListItemText,
-  ListItemSecondaryAction,
+  Card,
+  CardContent,
+  CardActions,
   Button,
   Stack,
   Typography,
   Chip,
   Box,
+  Divider,
+  useTheme,
+  useMediaQuery,
 } from '@mui/material';
 import { BalloonRequestDTO, UserRole } from '../types';
 
@@ -29,6 +32,9 @@ export const BalloonItem = ({
   onDelivery,
   onRevert,
 }: BalloonItemProps) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'Pending':
@@ -45,66 +51,99 @@ export const BalloonItem = ({
   };
 
   return (
-    <ListItem
-      sx={{
-        border: '1px solid',
-        borderColor: 'divider',
-        borderRadius: 1,
-        mb: 1,
+    <Card 
+      sx={{ 
+        mb: 2,
+        borderLeft: isMobile ? 15 : 25,
+        borderColor: balloon.balloonColor.toLowerCase(),
         '&:hover': {
-          backgroundColor: 'action.hover',
+          boxShadow: 3,
         },
       }}
     >
-      <ListItemText
-        primary={
-          <Stack direction="row" spacing={1} alignItems="center">
-            <Typography variant="subtitle1">
+      <CardContent>
+        <Stack spacing={2}>
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: isMobile ? 'column' : 'row',
+            alignItems: isMobile ? 'flex-start' : 'center',
+            gap: 1 
+          }}>
+            <Typography 
+              variant={isMobile ? "subtitle1" : "h6"} 
+              component="div"
+              sx={{ mb: isMobile ? 1 : 0 }}
+            >
               Team {balloon.teamName}
             </Typography>
-            <Chip
-              label={`Problem ${balloon.problemIndex}`}
-              size="small"
-              color="primary"
-              variant="outlined"
-            />
-            <Chip
-              label={balloon.balloonColor}
-              size="small"
-              sx={{
-                backgroundColor: balloon.balloonColor.toLowerCase(),
-                color: 'white',
-              }}
-            />
-            <Chip
-              label={balloon.status}
-              size="small"
-              color={getStatusColor(balloon.status)}
-            />
-          </Stack>
-        }
-        secondary={
-          <Box>
+            <Box sx={{ 
+              display: 'flex', 
+              flexWrap: 'wrap',
+              gap: 1,
+              width: isMobile ? '100%' : 'auto'
+            }}>
+              <Chip
+                label={`Problem ${balloon.problemIndex}`}
+                size={isMobile ? "medium" : "small"}
+                color="primary"
+                variant="outlined"
+              />
+              <Chip
+                label={balloon.balloonColor}
+                size={isMobile ? "medium" : "small"}
+                sx={{
+                  backgroundColor: balloon.balloonColor.toLowerCase(),
+                  color: 'white',
+                  fontWeight: 'bold',
+                  minWidth: isMobile ? '100px' : '80px',
+                  textAlign: 'center',
+                }}
+              />
+              <Chip
+                label={balloon.status}
+                size={isMobile ? "medium" : "small"}
+                color={getStatusColor(balloon.status)}
+                variant="outlined"
+              />
+            </Box>
+          </Box>
+          
+          <Divider />
+          
+          <Stack spacing={1}>
             <Typography variant="body2" color="text.secondary">
-              Submitted at: {new Date(balloon.timestamp).toLocaleString()}
+              Submitted: {new Date(balloon.timestamp).toLocaleString()}
             </Typography>
             {balloon.statusChangedAt && (
               <Typography variant="body2" color="text.secondary">
-                Status changed at: {new Date(balloon.statusChangedAt).toLocaleString()}
-                {balloon.statusChangedBy && ` by ${balloon.statusChangedBy}`}
+                Status changed: {new Date(balloon.statusChangedAt).toLocaleString()}
+                {balloon.statusChangedBy && (
+                  <Typography component="span" color="primary" sx={{ ml: 0.5 }}>
+                    by {balloon.statusChangedBy}
+                  </Typography>
+                )}
               </Typography>
             )}
-          </Box>
-        }
-      />
+          </Stack>
+        </Stack>
+      </CardContent>
+      
       {showActions && (
-        <ListItemSecondaryAction>
+        <CardActions 
+          sx={{ 
+            justifyContent: 'flex-end', 
+            pt: 0,
+            flexDirection: isMobile ? 'column' : 'row',
+            gap: isMobile ? 1 : 0
+          }}
+        >
           {userRole === 'balloonPrep' && balloon.status === 'Pending' && onMarkReady && (
             <Button
               variant="contained"
               color="warning"
               onClick={() => onMarkReady(balloon)}
-              sx={{ mr: 1 }}
+              fullWidth={isMobile}
+              sx={{ mr: isMobile ? 0 : 1 }}
             >
               Mark Ready
             </Button>
@@ -114,31 +153,34 @@ export const BalloonItem = ({
               variant="contained"
               color="primary"
               onClick={() => onPickup(balloon)}
-              sx={{ mr: 1 }}
+              fullWidth={isMobile}
+              sx={{ mr: isMobile ? 0 : 1 }}
             >
               Pick Up
             </Button>
           )}
-          {balloon.status === 'PickedUp' && onDelivery && (
+          {userRole === 'courier' && balloon.status === 'PickedUp' && onDelivery && (
             <Button
               variant="contained"
               color="success"
               onClick={() => onDelivery(balloon)}
+              fullWidth={isMobile}
             >
               Deliver
             </Button>
           )}
-          {balloon.status === 'Delivered' && onRevert && (
+          {userRole === 'courier' && balloon.status === 'Delivered' && onRevert && (
             <Button
               variant="contained"
               color="warning"
               onClick={() => onRevert(balloon)}
+              fullWidth={isMobile}
             >
               Revert to Picked Up
             </Button>
           )}
-        </ListItemSecondaryAction>
+        </CardActions>
       )}
-    </ListItem>
+    </Card>
   );
 }; 

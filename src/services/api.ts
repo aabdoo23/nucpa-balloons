@@ -5,7 +5,6 @@ import {
   LoginRequest, 
   BalloonRequestDTO, 
   BalloonStatusUpdateRequest, 
-  AdminSettingsResponse, 
   Room, 
   Team 
 } from '../types';
@@ -28,29 +27,24 @@ export const login = async (credentials: LoginRequest) => {
   return response.data;
 };
 
-export const getAdminSettings = async () => {
-  const response = await api.get('/admin/settings');
-  return response.data as AdminSettings;
-};
-
 export const updateAdminSettings = async (settings: Partial<AdminSettings>) => {
   const response = await api.post('/admin/settings/update', settings);
-  return response.data as AdminSettings;
+  return response.data.$values ? response.data.$values as AdminSettings : response.data as AdminSettings;
 };
 
 export const getProblemBalloonMaps = async () => {
   const response = await api.get('/admin/settings/ProblemBalloonMap/getAll');
-  return response.data as ProblemBalloonMap[];
+  return response.data.$values ? response.data.$values as ProblemBalloonMap[] : response.data as ProblemBalloonMap[];
 };
 
 export const createProblemBalloonMap = async (map: Omit<ProblemBalloonMap, 'id'> & { adminSettingsId: string }) => {
   const response = await api.post('/admin/settings/ProblemBalloonMap/create', map);
-  return response.data as ProblemBalloonMap;
+  return response.data.$values ? response.data.$values as ProblemBalloonMap : response.data as ProblemBalloonMap;
 };
 
 export const updateProblemBalloonMap = async (map: ProblemBalloonMap) => {
   const response = await api.post('/admin/settings/ProblemBalloonMap/update', map);
-  return response.data as ProblemBalloonMap;
+  return response.data.$values ? response.data.$values as ProblemBalloonMap : response.data as ProblemBalloonMap;
 };
 
 export const deleteProblemBalloonMap = async (id: string) => {
@@ -92,16 +86,23 @@ export const updateBalloonStatus = async (id: string, request: BalloonStatusUpda
 
 export const getAllAdminSettings = async () => {
   const response = await api.get('/admin/settings/getAll');
-  const data = response.data;
-  return {
-    ...data,
-    $values: Array.isArray(data.$values) ? data.$values.map((settings: any) => ({
-      ...settings,
-      teams: Array.isArray(settings.teams?.$values) ? settings.teams.$values : [],
-      rooms: Array.isArray(settings.rooms?.$values) ? settings.rooms.$values : [],
-      problemBalloonMaps: Array.isArray(settings.problemBalloonMaps?.$values) ? settings.problemBalloonMaps.$values : []
-    })) : []
-  } as AdminSettingsResponse;
+  const data = response.data.$values ? response.data.$values : response.data;
+  
+  // Ensure we're working with an array
+  const settingsArray = Array.isArray(data) ? data : [data];
+  
+  // Process each settings object
+  const processedSettings = settingsArray.map((settings: any) => ({
+    ...settings,
+    teams: Array.isArray(settings.teams?.$values) ? settings.teams.$values : 
+           Array.isArray(settings.teams) ? settings.teams : [],
+    rooms: Array.isArray(settings.rooms?.$values) ? settings.rooms.$values : 
+           Array.isArray(settings.rooms) ? settings.rooms : [],
+    problemBalloonMaps: Array.isArray(settings.problemBalloonMaps?.$values) ? settings.problemBalloonMaps.$values : 
+                       Array.isArray(settings.problemBalloonMaps) ? settings.problemBalloonMaps : []
+  }));
+
+  return processedSettings;
 };
 
 export const getActiveAdminSettings = async () => {

@@ -11,6 +11,8 @@ import {
   Tooltip,
   Chip,
   Button,
+  useTheme,
+  useMediaQuery,
 } from '@mui/material';
 import { Settings as SettingsIcon } from '@mui/icons-material';
 import { signalRService } from '../services/signalR';
@@ -53,6 +55,8 @@ function TabPanel(props: TabPanelProps) {
 }
 
 export const MainPage = () => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [pendingBalloons, setPendingBalloons] = useState<BalloonRequestDTO[]>([]);
   const [readyForPickupBalloons, setReadyForPickupBalloons] = useState<BalloonRequestDTO[]>([]);
   const [pickedUpBalloons, setPickedUpBalloons] = useState<BalloonRequestDTO[]>([]);
@@ -65,10 +69,16 @@ export const MainPage = () => {
   const [userRole, setUserRole] = useState<UserRole>(() => localStorage.getItem('userRole') as UserRole || 'courier');
 
   useEffect(() => {
+    // Show settings dialog if no name or role is set
+    if (!userName || !userRole) {
+      setSettingsDialogOpen(true);
+    }
+  }, [userName, userRole]);
+
+  useEffect(() => {
     let mounted = true;
 
     const handleBalloonStatusChange = (updates: BalloonUpdates) => {
-      console.log('Received balloon status change:', updates);
       if (!mounted) return;
 
       if (Array.isArray(updates.Pending)) setPendingBalloons(updates.Pending);
@@ -82,6 +92,7 @@ export const MainPage = () => {
         await signalRService.startConnection();
         if (mounted) {
           signalRService.onBalloonStatusChanged(handleBalloonStatusChange);
+          signalRService.onReceiveBalloonUpdates(handleBalloonStatusChange);
         }
       } catch (error) {
         console.error('Failed to initialize SignalR:', error);
@@ -130,6 +141,7 @@ export const MainPage = () => {
       mounted = false;
       if (signalRService.isConnected()) {
         signalRService.offBalloonStatusChanged(handleBalloonStatusChange);
+        signalRService.offReceiveBalloonUpdates(handleBalloonStatusChange);
         signalRService.stopConnection();
       }
     };
@@ -205,10 +217,16 @@ export const MainPage = () => {
   };
 
   const handleCloseSettingsDialog = () => {
-    setSettingsDialogOpen(false);
+    // Only allow closing if both name and role are set
+    if (userName && userRole) {
+      setSettingsDialogOpen(false);
+    }
   };
 
   const handleSaveSettings = () => {
+    if (!userName || !userRole) {
+      return; // Don't save if either is missing
+    }
     localStorage.setItem('userName', userName);
     localStorage.setItem('userRole', userRole);
     handleCloseSettingsDialog();
@@ -232,24 +250,50 @@ export const MainPage = () => {
   };
 
   return (
-    <Container maxWidth="md">
-      <Box sx={{ mt: 4 }}>
-        <Paper elevation={3} sx={{ p: 3 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Typography variant="h4">
+    <Container maxWidth="md" sx={{ px: isMobile ? 1 : 3 }}>
+      <Box sx={{ mt: isMobile ? 2 : 4 }}>
+        <Paper elevation={3} sx={{ p: isMobile ? 2 : 3 }}>
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: isMobile ? 'column' : 'row',
+            justifyContent: 'space-between', 
+            alignItems: isMobile ? 'flex-start' : 'center', 
+            gap: isMobile ? 2 : 0,
+            mb: 2 
+          }}>
+            <Box sx={{ 
+              display: 'flex', 
+              flexDirection: isMobile ? 'column' : 'row',
+              alignItems: isMobile ? 'flex-start' : 'center', 
+              gap: 2 
+            }}>
+              <Typography variant={isMobile ? "h5" : "h4"}>
                 Balloon Requests
               </Typography>
-              {userName && (
+              {userName && userRole ? (
                 <Chip
                   label={`${userName} (${userRole})`}
                   color="primary"
                   variant="outlined"
+                  size={isMobile ? "medium" : "small"}
+                />
+              ) : (
+                <Chip
+                  label="Please set your name and role"
+                  color="error"
+                  variant="outlined"
+                  size={isMobile ? "medium" : "small"}
                 />
               )}
             </Box>
             <Tooltip title="Change your name and role">
-              <IconButton onClick={handleOpenSettingsDialog}>
+              <IconButton 
+                onClick={handleOpenSettingsDialog}
+                sx={{ 
+                  mt: isMobile ? 1 : 0,
+                  alignSelf: isMobile ? 'flex-end' : 'auto'
+                }}
+              >
                 <SettingsIcon />
               </IconButton>
             </Tooltip>
@@ -265,16 +309,36 @@ export const MainPage = () => {
                 variant="contained" 
                 onClick={() => window.location.reload()}
                 sx={{ mt: 2 }}
+                fullWidth={isMobile}
               >
                 Retry
               </Button>
+            </Box>
+          ) : !userName || !userRole ? (
+            <Box sx={{ p: 3, textAlign: 'center' }}>
+              <Typography variant="h6" color="error" gutterBottom>
+                Please set your name and role to continue
+              </Typography>
+              <Typography color="text.secondary">
+                You need to set your name and role before you can interact with balloons.
+              </Typography>
             </Box>
           ) : (
             <>
               <Tabs
                 value={activeTab}
                 onChange={(_, newValue) => setActiveTab(newValue)}
-                sx={{ mb: 3 }}
+                sx={{ 
+                  mb: 3,
+                  '& .MuiTabs-flexContainer': {
+                    flexWrap: isMobile ? 'wrap' : 'nowrap',
+                    gap: isMobile ? 1 : 0,
+                  },
+                  '& .MuiTab-root': {
+                    minWidth: isMobile ? 'auto' : 160,
+                    fontSize: isMobile ? '0.75rem' : '0.875rem',
+                  }
+                }}
               >
                 {getTabs().map(tab => (
                   <Tab key={tab.value} label={tab.label} value={tab.value} />
