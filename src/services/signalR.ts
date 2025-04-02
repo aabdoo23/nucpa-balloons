@@ -41,17 +41,17 @@ class SignalRService {
         .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
         .build();
 
-      this.connection.onreconnecting((error: Error) => {
+      this.connection.onreconnecting((error?: Error) => {
         console.log('SignalR reconnecting...', error);
         this.reconnectAttempts++;
       });
 
-      this.connection.onreconnected((connectionId: string) => {
+      this.connection.onreconnected((connectionId?: string) => {
         console.log('SignalR reconnected with connection ID:', connectionId);
         this.reconnectAttempts = 0;
       });
 
-      this.connection.onclose((error: Error) => {
+      this.connection.onclose((error?: Error) => {
         console.log('SignalR connection closed:', error);
         if (this.reconnectAttempts >= this.maxReconnectAttempts) {
           console.log('Max reconnection attempts reached. Stopping reconnection.');

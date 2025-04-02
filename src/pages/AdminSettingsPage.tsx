@@ -93,10 +93,10 @@ export default function AdminSettingsPage() {
         getAllRooms(),
         getProblemBalloonMaps(),
       ]);
-      setAllSettings(Array.isArray(settingsData.$values) ? settingsData.$values : []);
+      setAllSettings(Array.isArray(settingsData) ? settingsData : []);
       setActiveSettings(activeData);
       setRooms(Array.isArray(roomsData) ? roomsData : []);
-      setMaps(Array.isArray(mapsData.$values) ? mapsData.$values : []);
+      setMaps(Array.isArray(mapsData) ? mapsData : []);
       if (activeData) {
         setTeams(Array.isArray(activeData.teams) ? activeData.teams : []);
       }
