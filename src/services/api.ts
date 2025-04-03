@@ -132,16 +132,21 @@ export const getAllRooms = async () => {
   return Array.isArray(response.data.$values) ? response.data.$values : response.data;
 };
 
-export const createRoom = async (room: { name: string; capacity?: number; isAvailable?: boolean }) => {
+export const createRoom = async (room: Omit<Room, 'id'>): Promise<Room> => {
   const response = await api.post('/admin/settings/room/create', room);
-  return response.data as Room;
+  return response.data;
 };
 
-export const deleteRoom = async (roomId: string) => {
-  await api.post('/admin/settings/room/delete', null, {
-    params: { roomId }
-  });
+export const updateRoom = async (room: Room): Promise<Room> => {
+  const response = await api.put('/admin/settings/room/update', room);
+  return response.data;
 };
+
+// export const deleteRoom = async (roomId: string): Promise<void> => {
+//   await api.delete('/admin/settings/room/delete', {
+//     params: { RoomId: roomId }
+//   });
+// };
 
 export const createTeam = async (team: { id: string; codeforcesHandle: string; roomId: string }) => {
   const response = await api.post('/admin/settings/team/createTeam', team);

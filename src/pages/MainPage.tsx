@@ -13,20 +13,35 @@ import {
   Button,
   useTheme,
   useMediaQuery,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  FormControlLabel,
+  Switch,
+  AppBar,
+  Toolbar,
+  IconButton as MuiIconButton,
 } from '@mui/material';
-import { Settings as SettingsIcon } from '@mui/icons-material';
+import { 
+  Settings as SettingsIcon, 
+  Refresh as RefreshIcon,
+} from '@mui/icons-material';
 import { signalRService } from '../services/signalR';
-import { BalloonRequestDTO, UserRole, BalloonUpdates } from '../types';
+import { BalloonRequestDTO, UserRole, BalloonUpdates, Room } from '../types';
 import { 
   getPendingBalloons, 
   getPickedUpBalloons, 
   getDeliveredBalloons, 
   getReadyForPickupBalloons,
-  updateBalloonStatus 
+  updateBalloonStatus,
+  getAllRooms,
 } from '../services/api';
 import { BalloonList } from '../components/BalloonList';
 import { SettingsDialog } from '../components/SettingsDialog';
 import { EnvironmentSwitcher } from '../components/EnvironmentSwitcher';
+import { Statistics } from '../components/Statistics';
+import { lightTheme } from '../theme';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -55,18 +70,23 @@ function TabPanel(props: TabPanelProps) {
 }
 
 export const MainPage = () => {
-  const theme = useTheme();
+  const theme = lightTheme;
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [pendingBalloons, setPendingBalloons] = useState<BalloonRequestDTO[]>([]);
   const [readyForPickupBalloons, setReadyForPickupBalloons] = useState<BalloonRequestDTO[]>([]);
   const [pickedUpBalloons, setPickedUpBalloons] = useState<BalloonRequestDTO[]>([]);
   const [deliveredBalloons, setDeliveredBalloons] = useState<BalloonRequestDTO[]>([]);
+  const [rooms, setRooms] = useState<Room[]>([]);
   const [activeTab, setActiveTab] = useState(0);
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [userName, setUserName] = useState(() => localStorage.getItem('userName') || '');
   const [userRole, setUserRole] = useState<UserRole>(() => localStorage.getItem('userRole') as UserRole || 'courier');
+  
+  // Filter states
+  const [selectedRoom, setSelectedRoom] = useState<string>('');
+  const [showOnlyMyBalloons, setShowOnlyMyBalloons] = useState(false);
 
   useEffect(() => {
     // Show settings dialog if no name or role is set
@@ -107,17 +127,19 @@ export const MainPage = () => {
       setIsLoading(true);
       setError(null);
       try {
-        const [pending, readyForPickup, pickedUp, delivered] = await Promise.all([
+        const [pending, readyForPickup, pickedUp, delivered, roomsData] = await Promise.all([
           getPendingBalloons(),
           getReadyForPickupBalloons(),
           getPickedUpBalloons(),
           getDeliveredBalloons(),
+          getAllRooms(),
         ]);
         if (!mounted) return;
         setPendingBalloons(Array.isArray(pending) ? pending : []);
         setReadyForPickupBalloons(Array.isArray(readyForPickup) ? readyForPickup : []);
         setPickedUpBalloons(Array.isArray(pickedUp) ? pickedUp : []);
         setDeliveredBalloons(Array.isArray(delivered) ? delivered : []);
+        setRooms(Array.isArray(roomsData) ? roomsData : []);
       } catch (error) {
         console.error('Error loading initial data:', error);
         if (mounted) {
@@ -126,6 +148,7 @@ export const MainPage = () => {
           setReadyForPickupBalloons([]);
           setPickedUpBalloons([]);
           setDeliveredBalloons([]);
+          setRooms([]);
         }
       } finally {
         if (mounted) {
@@ -148,16 +171,18 @@ export const MainPage = () => {
   }, []);
 
   const refreshData = async () => {
-    const [pending, readyForPickup, pickedUp, delivered] = await Promise.all([
+    const [pending, readyForPickup, pickedUp, delivered, roomsData] = await Promise.all([
       getPendingBalloons(),
       getReadyForPickupBalloons(),
       getPickedUpBalloons(),
       getDeliveredBalloons(),
+      getAllRooms(),
     ]);
     setPendingBalloons(Array.isArray(pending) ? pending : []);
     setReadyForPickupBalloons(Array.isArray(readyForPickup) ? readyForPickup : []);
     setPickedUpBalloons(Array.isArray(pickedUp) ? pickedUp : []);
     setDeliveredBalloons(Array.isArray(delivered) ? delivered : []);
+    setRooms(Array.isArray(roomsData) ? roomsData : []);
   };
 
   const handleMarkReady = async (balloon: BalloonRequestDTO) => {
@@ -249,87 +274,115 @@ export const MainPage = () => {
     }
   };
 
+  // Filter functions
+  const getFilteredReadyForPickupBalloons = () => {
+    let filtered = readyForPickupBalloons;
+    
+    if (selectedRoom) {
+      filtered = filtered.filter(balloon => balloon.roomName === selectedRoom);
+    }
+    
+    return filtered;
+  };
+
+  const getFilteredPickedUpBalloons = () => {
+    let filtered = pickedUpBalloons;
+    
+    if (showOnlyMyBalloons) {
+      filtered = filtered.filter(balloon => balloon.statusChangedBy === userName);
+    }
+    
+    return filtered;
+  };
+
+  const getFilteredDeliveredBalloons = () => {
+    let filtered = deliveredBalloons;
+    
+    if (showOnlyMyBalloons) {
+      filtered = filtered.filter(balloon => balloon.statusChangedBy === userName);
+    }
+    
+    return filtered;
+  };
+
   return (
-    <Container maxWidth="md" sx={{ px: isMobile ? 1 : 3 }}>
-      <Box sx={{ mt: isMobile ? 2 : 4 }}>
-        <Paper elevation={3} sx={{ p: isMobile ? 2 : 3 }}>
-          <Box sx={{ 
-            display: 'flex', 
-            flexDirection: isMobile ? 'column' : 'row',
-            justifyContent: 'space-between', 
-            alignItems: isMobile ? 'flex-start' : 'center', 
-            gap: isMobile ? 2 : 0,
-            mb: 2 
-          }}>
-            <Box sx={{ 
-              display: 'flex', 
-              flexDirection: isMobile ? 'column' : 'row',
-              alignItems: isMobile ? 'flex-start' : 'center', 
-              gap: 2 
-            }}>
-              <Typography variant={isMobile ? "h5" : "h4"}>
-                Balloon Requests
-              </Typography>
-              {userName && userRole ? (
-                <Chip
-                  label={`${userName} (${userRole})`}
-                  color="primary"
-                  variant="outlined"
-                  size={isMobile ? "medium" : "small"}
-                />
-              ) : (
-                <Chip
-                  label="Please set your name and role"
-                  color="error"
-                  variant="outlined"
-                  size={isMobile ? "medium" : "small"}
-                />
-              )}
-            </Box>
-            <Tooltip title="Change your name and role">
-              <IconButton 
-                onClick={handleOpenSettingsDialog}
-                sx={{ 
-                  mt: isMobile ? 1 : 0,
-                  alignSelf: isMobile ? 'flex-end' : 'auto'
-                }}
-              >
+    <Box sx={{ 
+      minHeight: '100vh',
+      bgcolor: theme.palette.background.default,
+      display: 'flex',
+      flexDirection: 'column',
+    }}>
+      <AppBar position="static" color="default" elevation={1}>
+        <Toolbar>
+          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+            Balloon Delivery System
+          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            {userName && userRole && (
+              <Chip
+                label={`${userName} (${userRole})`}
+                color="primary"
+                variant="outlined"
+                size="small"
+              />
+            )}
+            <Tooltip title="Refresh data">
+              <MuiIconButton onClick={refreshData} color="inherit">
+                <RefreshIcon />
+              </MuiIconButton>
+            </Tooltip>
+            <Tooltip title="Settings">
+              <MuiIconButton onClick={handleOpenSettingsDialog} color="inherit">
                 <SettingsIcon />
-              </IconButton>
+              </MuiIconButton>
             </Tooltip>
           </Box>
-          {isLoading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
-              <CircularProgress />
-            </Box>
-          ) : error ? (
-            <Box sx={{ p: 3, bgcolor: 'error.light', color: 'error.contrastText', borderRadius: 1 }}>
-              <Typography>{error}</Typography>
-              <Button 
-                variant="contained" 
-                onClick={() => window.location.reload()}
-                sx={{ mt: 2 }}
-                fullWidth={isMobile}
-              >
-                Retry
-              </Button>
-            </Box>
-          ) : !userName || !userRole ? (
-            <Box sx={{ p: 3, textAlign: 'center' }}>
-              <Typography variant="h6" color="error" gutterBottom>
-                Please set your name and role to continue
-              </Typography>
-              <Typography color="text.secondary">
-                You need to set your name and role before you can interact with balloons.
-              </Typography>
-            </Box>
-          ) : (
-            <>
+        </Toolbar>
+      </AppBar>
+
+      <Container maxWidth="lg" sx={{ mt: 4, mb: 4, flexGrow: 1 }}>
+        {isLoading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+            <CircularProgress />
+          </Box>
+        ) : error ? (
+          <Paper sx={{ p: 3, bgcolor: 'error.light', color: 'error.contrastText' }}>
+            <Typography>{error}</Typography>
+            <Button 
+              variant="contained" 
+              onClick={() => window.location.reload()}
+              sx={{ mt: 2 }}
+              fullWidth={isMobile}
+            >
+              Retry
+            </Button>
+          </Paper>
+        ) : !userName || !userRole ? (
+          <Paper sx={{ p: 3, textAlign: 'center' }}>
+            <Typography variant="h6" color="error" gutterBottom>
+              Please set your name and role to continue
+            </Typography>
+            <Typography color="text.secondary">
+              You need to set your name and role before you can interact with balloons.
+            </Typography>
+          </Paper>
+        ) : (
+          <>
+            <Statistics
+              pendingBalloons={pendingBalloons}
+              readyForPickupBalloons={readyForPickupBalloons}
+              pickedUpBalloons={pickedUpBalloons}
+              deliveredBalloons={deliveredBalloons}
+              userName={userName}
+              userRole={userRole}
+            />
+
+            <Paper sx={{ p: 2 }}>
               <Tabs
                 value={activeTab}
                 onChange={(_, newValue) => setActiveTab(newValue)}
                 sx={{ 
-                  mb: 3,
+                  mb: 2,
                   '& .MuiTabs-flexContainer': {
                     flexWrap: isMobile ? 'wrap' : 'nowrap',
                     gap: isMobile ? 1 : 0,
@@ -345,11 +398,53 @@ export const MainPage = () => {
                 ))}
               </Tabs>
 
+              {/* Filters */}
+              <Box sx={{ 
+                mb: 2,
+                display: 'flex',
+                flexDirection: isMobile ? 'column' : 'row',
+                gap: 2,
+                alignItems: isMobile ? 'stretch' : 'center'
+              }}>
+                {userRole === 'courier' && activeTab === 0 && (
+                  <FormControl 
+                    fullWidth={isMobile} 
+                    sx={{ minWidth: isMobile ? '100%' : 200 }}
+                  >
+                    <InputLabel>Filter by Room</InputLabel>
+                    <Select
+                      value={selectedRoom}
+                      label="Filter by Room"
+                      onChange={(e) => setSelectedRoom(e.target.value)}
+                    >
+                      <MenuItem value="">All Rooms</MenuItem>
+                      {rooms.map((room) => (
+                        <MenuItem key={room.id} value={room.name}>
+                          Room {room.name}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                )}
+                {userRole === 'courier' && (activeTab === 1 || activeTab === 2) && (
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={showOnlyMyBalloons}
+                        onChange={(e) => setShowOnlyMyBalloons(e.target.checked)}
+                      />
+                    }
+                    label="Show only my balloons"
+                  />
+                )}
+              </Box>
+
+              {/* Balloon Lists */}
               {userRole === 'courier' ? (
                 <>
                   <TabPanel value={activeTab} index={0}>
                     <BalloonList
-                      balloons={readyForPickupBalloons}
+                      balloons={getFilteredReadyForPickupBalloons()}
                       showActions={true}
                       onPickup={handlePickup}
                       userRole={userRole}
@@ -357,7 +452,7 @@ export const MainPage = () => {
                   </TabPanel>
                   <TabPanel value={activeTab} index={1}>
                     <BalloonList
-                      balloons={pickedUpBalloons}
+                      balloons={getFilteredPickedUpBalloons()}
                       showActions={true}
                       onDelivery={handleDelivery}
                       userRole={userRole}
@@ -365,7 +460,7 @@ export const MainPage = () => {
                   </TabPanel>
                   <TabPanel value={activeTab} index={2}>
                     <BalloonList
-                      balloons={deliveredBalloons}
+                      balloons={getFilteredDeliveredBalloons()}
                       showActions={true}
                       onRevert={handleRevert}
                       userRole={userRole}
@@ -384,7 +479,7 @@ export const MainPage = () => {
                   </TabPanel>
                   <TabPanel value={activeTab} index={1}>
                     <BalloonList
-                      balloons={readyForPickupBalloons}
+                      balloons={getFilteredReadyForPickupBalloons()}
                       showActions={true}
                       onPickup={handlePickup}
                       userRole={userRole}
@@ -392,7 +487,7 @@ export const MainPage = () => {
                   </TabPanel>
                   <TabPanel value={activeTab} index={2}>
                     <BalloonList
-                      balloons={pickedUpBalloons}
+                      balloons={getFilteredPickedUpBalloons()}
                       showActions={true}
                       onDelivery={handleDelivery}
                       userRole={userRole}
@@ -400,7 +495,7 @@ export const MainPage = () => {
                   </TabPanel>
                   <TabPanel value={activeTab} index={3}>
                     <BalloonList
-                      balloons={deliveredBalloons}
+                      balloons={getFilteredDeliveredBalloons()}
                       showActions={true}
                       onRevert={handleRevert}
                       userRole={userRole}
@@ -408,10 +503,10 @@ export const MainPage = () => {
                   </TabPanel>
                 </>
               )}
-            </>
-          )}
-        </Paper>
-      </Box>
+            </Paper>
+          </>
+        )}
+      </Container>
 
       <SettingsDialog
         open={settingsDialogOpen}
@@ -423,6 +518,6 @@ export const MainPage = () => {
         onUserRoleChange={setUserRole}
       />
       <EnvironmentSwitcher />
-    </Container>
+    </Box>
   );
 };

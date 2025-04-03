@@ -11,6 +11,7 @@ export interface BalloonRequestDTO {
   timestamp: string;
   statusChangedAt?: string;
   statusChangedBy?: string;
+  roomName: string;
 }
 
 export interface BalloonStatusUpdateRequest {
@@ -45,6 +46,7 @@ export interface AdminSettings {
 
 export interface Room {
   id: string;
+  name: string;
   capacity?: number;
   isAvailable?: boolean;
   adminSettingsId: string;

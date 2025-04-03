@@ -29,7 +29,7 @@ import {
   updateAdminSettings,
   getAllRooms,
   createRoom,
-  deleteRoom,
+  // deleteRoom,
   getProblemBalloonMaps,
   createProblemBalloonMap,
   updateProblemBalloonMap,
@@ -37,8 +37,16 @@ import {
   createTeam,
   deleteTeam,
   updateTeamRoom,
+  updateRoom,
 } from '../services/api';
 import { AdminSettings, ProblemBalloonMap, Room, Team } from '../types';
+
+interface NewRoom {
+  name: string;
+  capacity?: number;
+  isAvailable?: boolean;
+  adminSettingsId: string;
+}
 
 export default function AdminSettingsPage() {
   const [allSettings, setAllSettings] = useState<AdminSettings[]>([]);
@@ -53,10 +61,11 @@ export default function AdminSettingsPage() {
   const [editingRoom, setEditingRoom] = useState<Room | null>(null);
   const [editingTeam, setEditingTeam] = useState<Team | null>(null);
   const [editingMap, setEditingMap] = useState<ProblemBalloonMap | null>(null);
-  const [newRoom, setNewRoom] = useState<{ name: string; capacity?: number; isAvailable?: boolean }>({
+  const [newRoom, setNewRoom] = useState<NewRoom>({
     name: '',
     capacity: undefined,
     isAvailable: true,
+    adminSettingsId: '',
   });
   const [newTeam, setNewTeam] = useState<{ id: string; codeforcesHandle: string; roomId: string }>({
     id: '',
@@ -192,9 +201,10 @@ export default function AdminSettingsPage() {
     if (room) {
       setEditingRoom(room);
       setNewRoom({
-        name: room.id,
+        name: room.name,
         capacity: room.capacity,
         isAvailable: room.isAvailable,
+        adminSettingsId: room.adminSettingsId,
       });
     } else {
       setEditingRoom(null);
@@ -202,6 +212,7 @@ export default function AdminSettingsPage() {
         name: '',
         capacity: undefined,
         isAvailable: true,
+        adminSettingsId: '',
       });
     }
     setOpenRoomDialog(true);
@@ -214,21 +225,27 @@ export default function AdminSettingsPage() {
       name: '',
       capacity: undefined,
       isAvailable: true,
+      adminSettingsId: '',
     });
   };
 
-  const handleSaveRoom = async () => {
+  const handleAddRoom = async (event: React.FormEvent) => {
+    event.preventDefault();
     try {
       await createRoom({
-        name: newRoom.name,
-        capacity: newRoom.capacity,
-        isAvailable: newRoom.isAvailable
+        ...newRoom,
+        adminSettingsId: activeSettings?.id || '',
       });
-      
-      handleCloseRoomDialog();
+      setNewRoom({
+        name: '',
+        capacity: undefined,
+        isAvailable: true,
+        adminSettingsId: activeSettings?.id || '',
+      });
       await loadData();
     } catch (error) {
-      console.error('Error saving room:', error);
+      console.error('Failed to create room:', error);
+      // Handle error appropriately
     }
   };
 
@@ -336,14 +353,23 @@ export default function AdminSettingsPage() {
     }
   };
 
-  const handleDeleteRoom = async (roomId: string) => {
+  const handleUpdateRoom = async (room: Room) => {
     try {
-      await deleteRoom(roomId);
+      await updateRoom(room);
       await loadData();
     } catch (error) {
-      console.error('Error deleting room:', error);
+      console.error('Failed to update room:', error);
     }
   };
+
+  // const handleDeleteRoom = async (roomId: string) => {
+  //   try {
+  //     await deleteRoom(roomId);
+  //     await loadData();
+  //   } catch (error) {
+  //     console.error('Failed to delete room:', error);
+  //   }
+  // };
 
   const renderSettingsForm = (settings: AdminSettings) => {
     if (!settings) {
@@ -458,24 +484,28 @@ export default function AdminSettingsPage() {
         {rooms.map((room) => (
           <ListItem
             key={room.id}
-            sx={{
-              border: '1px solid',
-              borderColor: 'divider',
-              borderRadius: 1,
-              mb: 1,
-            }}
+            secondaryAction={
+              <Box>
+                <IconButton 
+                  edge="end" 
+                  aria-label="edit"
+                  onClick={() => handleUpdateRoom(room)}
+                >
+                  <EditIcon />
+                </IconButton>
+              </Box>
+            }
           >
             <ListItemText
-              primary={`Room ${room.id}`}
-              secondary={`Capacity: ${room.capacity || 'N/A'} | Available: ${room.isAvailable ? 'Yes' : 'No'}`}
+              primary={`Room ${room.name}`}
+              secondary={
+                <>
+                  {room.capacity && `Capacity: ${room.capacity}`}
+                  {room.isAvailable !== undefined && 
+                    ` • ${room.isAvailable ? 'Available' : 'Not Available'}`}
+                </>
+              }
             />
-            <IconButton
-              edge="end"
-              color="error"
-              onClick={() => handleDeleteRoom(room.id)}
-            >
-              <DeleteIcon />
-            </IconButton>
           </ListItem>
         ))}
       </List>
@@ -628,40 +658,47 @@ export default function AdminSettingsPage() {
       {/* Room Dialog */}
       <Dialog open={openRoomDialog} onClose={handleCloseRoomDialog}>
         <DialogTitle>
-          {editingRoom ? 'Edit Room' : 'Add New Room'}
+          {editingRoom ? 'Edit Room' : 'Add Room'}
         </DialogTitle>
         <DialogContent>
-          <TextField
-            fullWidth
-            label="Room Name"
-            value={newRoom.name}
-            onChange={(e) => setNewRoom({ ...newRoom, name: e.target.value })}
-            margin="normal"
-            required
-          />
-          <TextField
-            fullWidth
-            label="Capacity"
-            type="number"
-            value={newRoom.capacity || ''}
-            onChange={(e) => setNewRoom({ ...newRoom, capacity: e.target.value ? parseInt(e.target.value) : undefined })}
-            margin="normal"
-          />
-          <FormControlLabel
-            control={
-              <Switch
-                checked={newRoom.isAvailable}
-                onChange={(e) => setNewRoom({ ...newRoom, isAvailable: e.target.checked })}
-              />
-            }
-            label="Available"
-          />
+          <Box component="form" onSubmit={handleAddRoom} sx={{ mt: 2 }}>
+            <TextField
+              fullWidth
+              label="Room Name"
+              value={newRoom.name}
+              onChange={(e) => setNewRoom({ ...newRoom, name: e.target.value })}
+              required
+              sx={{ mb: 2 }}
+            />
+            <TextField
+              fullWidth
+              type="number"
+              label="Capacity"
+              value={newRoom.capacity || ''}
+              onChange={(e) => setNewRoom({ ...newRoom, capacity: parseInt(e.target.value) || undefined })}
+              sx={{ mb: 2 }}
+            />
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={newRoom.isAvailable}
+                  onChange={(e) => setNewRoom({ ...newRoom, isAvailable: e.target.checked })}
+                />
+              }
+              label="Available"
+              sx={{ mb: 2 }}
+            />
+            <Button
+              type="submit"
+              variant="contained"
+              fullWidth
+            >
+              Add Room
+            </Button>
+          </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseRoomDialog}>Cancel</Button>
-          <Button onClick={handleSaveRoom} variant="contained">
-            Save
-          </Button>
         </DialogActions>
       </Dialog>
 
