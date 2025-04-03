@@ -21,6 +21,9 @@ import {
   Toolbar,
   IconButton as MuiIconButton,
   Menu,
+  List,
+  ListItem,
+  ListItemText,
 } from '@mui/material';
 import { 
   Settings as SettingsIcon, 
@@ -41,6 +44,116 @@ import { SettingsDialog } from '../components/SettingsDialog';
 import { EnvironmentSwitcher } from '../components/EnvironmentSwitcher';
 import { Statistics } from '../components/Statistics';
 import { lightTheme } from '../theme';
+
+interface TeamBalloonStats {
+  teamName: string;
+  total: number;
+  pending: number;
+  readyForPickup: number;
+  pickedUp: number;
+  delivered: number;
+}
+
+const TeamStatistics = ({ balloons }: { balloons: BalloonRequestDTO[] }) => {
+  const teamStats = balloons.reduce((acc, balloon) => {
+    const teamName = balloon.teamName || 'Unknown Team';
+    if (!acc[teamName]) {
+      acc[teamName] = {
+        teamName,
+        total: 0,
+        pending: 0,
+        readyForPickup: 0,
+        pickedUp: 0,
+        delivered: 0
+      };
+    }
+    
+    acc[teamName].total++;
+    switch (balloon.status) {
+      case 'Pending':
+        acc[teamName].pending++;
+        break;
+      case 'ReadyForPickup':
+        acc[teamName].readyForPickup++;
+        break;
+      case 'PickedUp':
+        acc[teamName].pickedUp++;
+        break;
+      case 'Delivered':
+        acc[teamName].delivered++;
+        break;
+    }
+    
+    return acc;
+  }, {} as Record<string, TeamBalloonStats>);
+
+  const sortedTeams = Object.values(teamStats).sort((a, b) => b.total - a.total);
+
+  return (
+    <Paper sx={{ p: 2, mb: 3 }}>
+      <Typography variant="h6" gutterBottom>
+        Team Statistics
+      </Typography>
+      <List>
+        {sortedTeams.map((team) => (
+          <ListItem
+            key={team.teamName}
+            sx={{
+              border: '1px solid',
+              borderColor: 'divider',
+              borderRadius: 1,
+              mb: 1,
+              bgcolor: 'background.paper',
+            }}
+          >
+            <ListItemText
+              primary={
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+                    {team.teamName}
+                  </Typography>
+                  <Chip
+                    label={`Total: ${team.total}`}
+                    color="primary"
+                    size="small"
+                  />
+                </Box>
+              }
+              secondary={
+                <Box sx={{ display: 'flex', gap: 1, mt: 1, flexWrap: 'wrap' }}>
+                  <Chip
+                    label={`Pending: ${team.pending}`}
+                    size="small"
+                    variant="outlined"
+                    color="default"
+                  />
+                  <Chip
+                    label={`Ready: ${team.readyForPickup}`}
+                    size="small"
+                    variant="outlined"
+                    color="warning"
+                  />
+                  <Chip
+                    label={`Picked Up: ${team.pickedUp}`}
+                    size="small"
+                    variant="outlined"
+                    color="info"
+                  />
+                  <Chip
+                    label={`Delivered: ${team.delivered}`}
+                    size="small"
+                    variant="outlined"
+                    color="success"
+                  />
+                </Box>
+              }
+            />
+          </ListItem>
+        ))}
+      </List>
+    </Paper>
+  );
+};
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -86,7 +199,7 @@ export const MainPage = () => {
   
   // Filter states
   const [selectedRoom, setSelectedRoom] = useState<string>('');
-  const [showOnlyMyBalloons, setShowOnlyMyBalloons] = useState(false);
+  const [showOnlyMyBalloons, setShowOnlyMyBalloons] = useState(true);
 
   useEffect(() => {
     // Show settings dialog if no name or role is set
@@ -531,6 +644,15 @@ export const MainPage = () => {
                 </>
               )}
             </Paper>
+
+            <TeamStatistics 
+              balloons={[
+                ...pendingBalloons,
+                ...readyForPickupBalloons,
+                ...pickedUpBalloons,
+                ...deliveredBalloons
+              ]} 
+            />
           </>
         )}
       </Container>

@@ -19,6 +19,10 @@ import {
   DialogActions,
   Chip,
   Grid,
+  Select,
+  MenuItem,
+  InputLabel,
+  FormControl,
 } from '@mui/material';
 import { Delete as DeleteIcon, Edit as EditIcon, Add as AddIcon } from '@mui/icons-material';
 import {
@@ -500,6 +504,7 @@ export default function AdminSettingsPage() {
               primary={`Room ${room.name}`}
               secondary={
                 <>
+                  {room.id && `Id: ${room.id} - `}
                   {room.capacity && `Capacity: ${room.capacity}`}
                   {room.isAvailable !== undefined && 
                     ` • ${room.isAvailable ? 'Available' : 'Not Available'}`}
@@ -592,29 +597,32 @@ export default function AdminSettingsPage() {
               </Button>
             </Box>
             <List>
-              {teams.map((team) => (
-                <ListItem key={team.id}>
-                  <ListItemText
-                    primary={team.codeforcesHandle}
-                    secondary={`Room: ${team.roomId}`}
-                  />
-                  <ListItemSecondaryAction>
-                    <IconButton
-                      edge="end"
-                      onClick={() => handleOpenTeamDialog(team)}
-                      sx={{ mr: 1 }}
-                    >
-                      <EditIcon />
-                    </IconButton>
-                    <IconButton
-                      edge="end"
-                      onClick={() => handleDeleteTeam(team.id)}
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  </ListItemSecondaryAction>
-                </ListItem>
-              ))}
+              {teams.map((team) => {
+                const teamRoom = rooms.find(room => room.id === team.roomId);
+                return (
+                  <ListItem key={team.id}>
+                    <ListItemText
+                      primary={team.codeforcesHandle}
+                      secondary={`Room: ${teamRoom?.name || 'No Room Assigned'}`}
+                    />
+                    <ListItemSecondaryAction>
+                      <IconButton
+                        edge="end"
+                        onClick={() => handleOpenTeamDialog(team)}
+                        sx={{ mr: 1 }}
+                      >
+                        <EditIcon />
+                      </IconButton>
+                      <IconButton
+                        edge="end"
+                        onClick={() => handleDeleteTeam(team.id)}
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </ListItemSecondaryAction>
+                  </ListItem>
+                );
+              })}
             </List>
           </Paper>
 
@@ -628,26 +636,64 @@ export default function AdminSettingsPage() {
             </Box>
             <List>
               {maps.map((map) => (
-                <ListItem key={map.id}>
-                  <ListItemText
-                    primary={`Problem ${map.problemIndex}`}
-                    secondary={`Balloon Color: ${map.balloonColor}`}
-                  />
-                  <ListItemSecondaryAction>
-                    <IconButton
-                      edge="end"
-                      onClick={() => handleOpenMapDialog(map)}
-                      sx={{ mr: 1 }}
-                    >
-                      <EditIcon />
-                    </IconButton>
-                    <IconButton
-                      edge="end"
-                      onClick={() => handleDeleteMap(map.id)}
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  </ListItemSecondaryAction>
+                <ListItem 
+                  key={map.id}
+                  sx={{
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    borderRadius: 1,
+                    mb: 1,
+                    bgcolor: 'background.paper',
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                    <Box
+                      sx={{
+                        width: 24,
+                        height: 24,
+                        borderRadius: '50%',
+                        backgroundColor: map.balloonColor,
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        mr: 2,
+                      }}
+                    />
+                    <ListItemText
+                      primary={`Problem ${map.problemIndex}`}
+                      secondary={
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Typography variant="body2" color="text.secondary">
+                            Balloon Color:
+                          </Typography>
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              color: map.balloonColor,
+                              fontWeight: 'bold',
+                              textTransform: 'capitalize',
+                            }}
+                          >
+                            {map.balloonColor}
+                          </Typography>
+                        </Box>
+                      }
+                    />
+                    <ListItemSecondaryAction>
+                      <IconButton
+                        edge="end"
+                        onClick={() => handleOpenMapDialog(map)}
+                        sx={{ mr: 1 }}
+                      >
+                        <EditIcon />
+                      </IconButton>
+                      <IconButton
+                        edge="end"
+                        onClick={() => handleDeleteMap(map.id)}
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </ListItemSecondaryAction>
+                  </Box>
                 </ListItem>
               ))}
             </List>
@@ -726,21 +772,20 @@ export default function AdminSettingsPage() {
             required
             disabled={!!editingTeam}
           />
-          <TextField
-            fullWidth
-            select
-            label="Room"
-            value={newTeam.roomId}
-            onChange={(e) => setNewTeam({ ...newTeam, roomId: e.target.value })}
-            margin="normal"
-            required
-          >
-            {rooms.map((room) => (
-              <option key={room.id} value={room.id}>
-                Room {room.id}
-              </option>
-            ))}
-          </TextField>
+          <FormControl fullWidth margin="normal" required>
+            <InputLabel>Room</InputLabel>
+            <Select
+              value={newTeam.roomId}
+              label="Room"
+              onChange={(e) => setNewTeam({ ...newTeam, roomId: e.target.value })}
+            >
+              {rooms.map((room) => (
+                <MenuItem key={room.id} value={room.id}>
+                  {room.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseTeamDialog}>Cancel</Button>
@@ -764,14 +809,27 @@ export default function AdminSettingsPage() {
             margin="normal"
             required
           />
-          <TextField
-            fullWidth
-            label="Balloon Color"
-            value={newMap.balloonColor}
-            onChange={(e) => setNewMap({ ...newMap, balloonColor: e.target.value })}
-            margin="normal"
-            required
-          />
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 2 }}>
+            <TextField
+              fullWidth
+              label="Balloon Color"
+              value={newMap.balloonColor}
+              onChange={(e) => setNewMap({ ...newMap, balloonColor: e.target.value })}
+              margin="normal"
+              required
+            />
+            <Box
+              sx={{
+                width: 40,
+                height: 40,
+                borderRadius: '50%',
+                backgroundColor: newMap.balloonColor,
+                border: '1px solid',
+                borderColor: 'divider',
+                mt: 1,
+              }}
+            />
+          </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseMapDialog}>Cancel</Button>
