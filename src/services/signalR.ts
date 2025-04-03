@@ -1,5 +1,5 @@
 import { HubConnectionBuilder, HubConnection, HttpTransportType } from '@microsoft/signalr';
-import { BalloonRequestDTO, BalloonUpdates } from '../types';
+import { BalloonRequestDTO, BalloonUpdates, ToiletRequestUpdates, ToiletRequestDTO } from '../types';
 import { API_BASE_URL } from '../config';
 
 interface RawBalloonUpdates {
@@ -9,17 +9,31 @@ interface RawBalloonUpdates {
   delivered: BalloonRequestDTO[];
 }
 
+interface RawToiletRequestUpdates {
+  pending: ToiletRequestDTO[];
+  inProgress: ToiletRequestDTO[];
+  completed: ToiletRequestDTO[];
+}
+
 class SignalRService {
   private connection: HubConnection | null = null;
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
 
-  private normalizeUpdates(updates: RawBalloonUpdates): BalloonUpdates {
+  private normalizeBalloonUpdates(updates: RawBalloonUpdates): BalloonUpdates {
     return {
       Pending: updates.pending || [],
       ReadyForPickup: updates.readyForPickup || [],
       PickedUp: updates.pickedUp || [],
       Delivered: updates.delivered || []
+    };
+  }
+
+  private normalizeToiletRequestUpdates(updates: RawToiletRequestUpdates): ToiletRequestUpdates {
+    return {
+      Pending: updates.pending || [],
+      InProgress: updates.inProgress || [],
+      Completed: updates.completed || []
     };
   }
 
@@ -87,9 +101,9 @@ class SignalRService {
 
     console.log('Registering ReceiveBalloonUpdates callback...');
     this.connection.on('ReceiveBalloonUpdates', (rawUpdates: any) => {
-      
+
       let updates: RawBalloonUpdates;
-      
+
       // Handle different data formats
       if (rawUpdates.$values) {
         // If we receive a single array of balloons
@@ -118,7 +132,7 @@ class SignalRService {
         };
       }
 
-      const normalizedUpdates = this.normalizeUpdates(updates);
+      const normalizedUpdates = this.normalizeBalloonUpdates(updates);
       callback(normalizedUpdates);
     });
     console.log('ReceiveBalloonUpdates callback registered');
@@ -132,7 +146,7 @@ class SignalRService {
 
     console.log('Registering BalloonStatusChanged callback...');
     this.connection.on('BalloonStatusChanged', (rawUpdates: RawBalloonUpdates) => {
-      const normalizedUpdates = this.normalizeUpdates(rawUpdates);
+      const normalizedUpdates = this.normalizeBalloonUpdates(rawUpdates);
       callback(normalizedUpdates);
     });
     console.log('BalloonStatusChanged callback registered');
@@ -156,6 +170,30 @@ class SignalRService {
 
     this.connection.off('ReceiveBalloonUpdates', callback);
     console.log('Unregistered ReceiveBalloonUpdates callback');
+  }
+
+  public onReceiveToiletRequestUpdates(callback: (updates: ToiletRequestUpdates) => void) {
+    if (!this.connection) {
+      console.error('Cannot register callback: SignalR connection not established');
+      return;
+    }
+
+    console.log('Registering ReceiveToiletRequestUpdates callback...'); 
+    this.connection.on('ReceiveToiletRequestUpdates', (rawUpdates: any) => {
+      const normalizedUpdates = this.normalizeToiletRequestUpdates(rawUpdates);
+      callback(normalizedUpdates);
+    });
+    console.log('ReceiveToiletRequestUpdates callback registered');
+  }
+
+  public offReceiveToiletRequestUpdates(callback: (updates: ToiletRequestUpdates) => void) {
+    if (!this.connection) {
+      console.error('Cannot unregister callback: SignalR connection not established');
+      return;
+    }
+
+    this.connection.off('ReceiveToiletRequestUpdates', callback);
+    console.log('Unregistered ReceiveToiletRequestUpdates callback');
   }
 
   public isConnected(): boolean {

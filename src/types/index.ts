@@ -1,4 +1,4 @@
-export type UserRole = 'courier' | 'balloonPrep';
+export type UserRole = 'courier' | 'balloonPrep' | 'admin' | 'accompanier';
 
 export interface BalloonRequestDTO {
   id: string;
@@ -69,4 +69,51 @@ export interface ProblemBalloonMap {
 export interface LoginRequest {
   username: string;
   password: string;
+}
+
+export enum ToiletRequestStatus {
+  Pending = 0,
+  InProgress = 1,
+  Completed = 2
+}
+
+export enum ToiletRequestStatusString {
+  Pending = 'Pending',
+  InProgress = 'InProgress',
+  Completed = 'Completed'
+}
+
+export interface ToiletRequestDTO {
+  id: string;
+  teamId: string;
+  teamName: string;
+  roomName: string;
+  status: string;
+  isMale: boolean;
+  isUrgent: boolean;
+  comment: string;
+  timestamp: string;
+  statusChangedAt?: string;
+  statusChangedBy?: string;
+}
+
+export interface ToiletRequestStatusUpdateDTO {
+  id: string;
+  status: number;
+  statusUpdatedBy: string;
+  comment: string;
+}
+
+export interface ToiletRequestCreateDTO {
+  teamId: string;
+  isMale: boolean;
+  isUrgent: boolean;
+  comment: string;
+  statusChangedBy: string;
+}
+
+export interface ToiletRequestUpdates {
+  Pending: ToiletRequestDTO[];
+  InProgress: ToiletRequestDTO[];
+  Completed: ToiletRequestDTO[];
 } 

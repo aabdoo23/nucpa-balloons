@@ -6,7 +6,10 @@ import {
   BalloonRequestDTO, 
   BalloonStatusUpdateRequest, 
   Room, 
-  Team 
+  Team,
+  ToiletRequestCreateDTO,
+  ToiletRequestDTO,
+  ToiletRequestStatusUpdateDTO
 } from '../types';
 import { API_BASE_URL } from '../config';
 
@@ -171,4 +174,43 @@ export const getTeamById = async (teamId: string) => {
     params: { teamId }
   });
   return response.data as Team;
+};
+
+export const getAllToiletRequests = async () => {
+  const response = await api.get('/toiletRequest/all');
+  return Array.isArray(response.data.$values) ? response.data.$values : response.data;
+};
+
+export const getPendingToiletRequests = async () => {
+  const response = await api.get('/toiletRequest/pending');
+  return Array.isArray(response.data.$values) ? response.data.$values : response.data;
+};
+
+export const getInProgressToiletRequests = async () => {
+  const response = await api.get('/toiletRequest/in-progress');
+  return Array.isArray(response.data.$values) ? response.data.$values : response.data;
+};
+
+export const getCompletedToiletRequests = async () => {
+  const response = await api.get('/toiletRequest/completed');
+  return Array.isArray(response.data.$values) ? response.data.$values : response.data;
+};
+
+export const createToiletRequest = async (request: ToiletRequestCreateDTO): Promise<ToiletRequestDTO> => {
+  const response = await api.post('/toiletRequest', request);
+  return response.data;
+};
+
+export const updateToiletRequestStatus = async (request: ToiletRequestStatusUpdateDTO): Promise<ToiletRequestDTO> => {
+  const response = await api.put('/toiletRequest/status', request);
+  return response.data;
+};
+
+export const deleteToiletRequest = async (id: string): Promise<void> => {
+  await api.delete(`/toiletRequest/${id}`);
+};
+
+export const getAllTeams = async () => {
+  const response = await api.get('/admin/settings/team/getAll');
+  return Array.isArray(response.data.$values) ? response.data.$values : response.data;
 }; 

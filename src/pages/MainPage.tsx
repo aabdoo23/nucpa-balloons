@@ -7,11 +7,9 @@ import {
   Tabs,
   Tab,
   CircularProgress,
-  IconButton,
   Tooltip,
   Chip,
   Button,
-  useTheme,
   useMediaQuery,
   FormControl,
   InputLabel,
@@ -22,10 +20,11 @@ import {
   AppBar,
   Toolbar,
   IconButton as MuiIconButton,
+  Menu,
 } from '@mui/material';
 import { 
   Settings as SettingsIcon, 
-  Refresh as RefreshIcon,
+  AccountCircle as AccountCircleIcon,
 } from '@mui/icons-material';
 import { signalRService } from '../services/signalR';
 import { BalloonRequestDTO, UserRole, BalloonUpdates, Room } from '../types';
@@ -82,7 +81,8 @@ export const MainPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [userName, setUserName] = useState(() => localStorage.getItem('userName') || '');
-  const [userRole, setUserRole] = useState<UserRole>(() => localStorage.getItem('userRole') as UserRole || 'courier');
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [selectedRole, setSelectedRole] = useState<UserRole>(() => localStorage.getItem('userRole') as UserRole || 'courier');
   
   // Filter states
   const [selectedRoom, setSelectedRoom] = useState<string>('');
@@ -90,10 +90,10 @@ export const MainPage = () => {
 
   useEffect(() => {
     // Show settings dialog if no name or role is set
-    if (!userName || !userRole) {
+    if (!userName || !selectedRole) {
       setSettingsDialogOpen(true);
     }
-  }, [userName, userRole]);
+  }, [userName, selectedRole]);
 
   useEffect(() => {
     let mounted = true;
@@ -243,22 +243,22 @@ export const MainPage = () => {
 
   const handleCloseSettingsDialog = () => {
     // Only allow closing if both name and role are set
-    if (userName && userRole) {
+    if (userName && selectedRole) {
       setSettingsDialogOpen(false);
     }
   };
 
   const handleSaveSettings = () => {
-    if (!userName || !userRole) {
+    if (!userName || !selectedRole) {
       return; // Don't save if either is missing
     }
     localStorage.setItem('userName', userName);
-    localStorage.setItem('userRole', userRole);
+    localStorage.setItem('userRole', selectedRole);
     handleCloseSettingsDialog();
   };
 
   const getTabs = () => {
-    if (userRole === 'courier') {
+    if (selectedRole === 'courier') {
       return [
         { label: `Ready for Pickup (${readyForPickupBalloons.length})`, value: 0 },
         { label: `Picked Up (${pickedUpBalloons.length})`, value: 1 },
@@ -305,6 +305,20 @@ export const MainPage = () => {
     return filtered;
   };
 
+  const handleRoleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleRoleMenuClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleRoleChange = (role: UserRole) => {
+    setSelectedRole(role);
+    localStorage.setItem('userRole', role);
+    handleRoleMenuClose();
+  };
+
   return (
     <Box sx={{ 
       minHeight: '100vh',
@@ -318,19 +332,32 @@ export const MainPage = () => {
             Balloon Delivery System
           </Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            {userName && userRole && (
+            {userName && (
               <Chip
-                label={`${userName} (${userRole})`}
+                label={userName + ' (' + selectedRole + ')'}
                 color="primary"
                 variant="outlined"
-                size="small"
+                size="medium"
+                sx={{ fontWeight: 'bold', fontSize: '1rem' }}
               />
             )}
-            <Tooltip title="Refresh data">
-              <MuiIconButton onClick={refreshData} color="inherit">
-                <RefreshIcon />
+            <Tooltip title="Select Role">
+              <MuiIconButton onClick={handleRoleMenuOpen} color="inherit">
+                <AccountCircleIcon />
               </MuiIconButton>
             </Tooltip>
+            <Menu
+              anchorEl={anchorEl}
+              open={Boolean(anchorEl)}
+              onClose={handleRoleMenuClose}
+            >
+              <MenuItem onClick={() => handleRoleChange('courier')}>Courier</MenuItem>
+              {localStorage.getItem('token') && (
+                <MenuItem onClick={() => handleRoleChange('admin')}>Admin</MenuItem>
+              )}
+              <MenuItem onClick={() => handleRoleChange('balloonPrep')}>Balloon Prep</MenuItem>
+              <MenuItem onClick={() => handleRoleChange('accompanier')}>Accompanier</MenuItem>
+            </Menu>
             <Tooltip title="Settings">
               <MuiIconButton onClick={handleOpenSettingsDialog} color="inherit">
                 <SettingsIcon />
@@ -357,7 +384,7 @@ export const MainPage = () => {
               Retry
             </Button>
           </Paper>
-        ) : !userName || !userRole ? (
+        ) : !userName || !selectedRole ? (
           <Paper sx={{ p: 3, textAlign: 'center' }}>
             <Typography variant="h6" color="error" gutterBottom>
               Please set your name and role to continue
@@ -374,7 +401,7 @@ export const MainPage = () => {
               pickedUpBalloons={pickedUpBalloons}
               deliveredBalloons={deliveredBalloons}
               userName={userName}
-              userRole={userRole}
+              userRole={selectedRole}
             />
 
             <Paper sx={{ p: 2 }}>
@@ -406,7 +433,7 @@ export const MainPage = () => {
                 gap: 2,
                 alignItems: isMobile ? 'stretch' : 'center'
               }}>
-                {userRole === 'courier' && activeTab === 0 && (
+                {selectedRole === 'courier' && activeTab === 0 && (
                   <FormControl 
                     fullWidth={isMobile} 
                     sx={{ minWidth: isMobile ? '100%' : 200 }}
@@ -426,7 +453,7 @@ export const MainPage = () => {
                     </Select>
                   </FormControl>
                 )}
-                {userRole === 'courier' && (activeTab === 1 || activeTab === 2) && (
+                {selectedRole === 'courier' && (activeTab === 1 || activeTab === 2) && (
                   <FormControlLabel
                     control={
                       <Switch
@@ -440,14 +467,14 @@ export const MainPage = () => {
               </Box>
 
               {/* Balloon Lists */}
-              {userRole === 'courier' ? (
+              {selectedRole === 'courier' ? (
                 <>
                   <TabPanel value={activeTab} index={0}>
                     <BalloonList
                       balloons={getFilteredReadyForPickupBalloons()}
                       showActions={true}
                       onPickup={handlePickup}
-                      userRole={userRole}
+                      userRole={selectedRole}
                     />
                   </TabPanel>
                   <TabPanel value={activeTab} index={1}>
@@ -455,7 +482,7 @@ export const MainPage = () => {
                       balloons={getFilteredPickedUpBalloons()}
                       showActions={true}
                       onDelivery={handleDelivery}
-                      userRole={userRole}
+                      userRole={selectedRole}
                     />
                   </TabPanel>
                   <TabPanel value={activeTab} index={2}>
@@ -463,7 +490,7 @@ export const MainPage = () => {
                       balloons={getFilteredDeliveredBalloons()}
                       showActions={true}
                       onRevert={handleRevert}
-                      userRole={userRole}
+                      userRole={selectedRole}
                     />
                   </TabPanel>
                 </>
@@ -474,7 +501,7 @@ export const MainPage = () => {
                       balloons={pendingBalloons}
                       showActions={true}
                       onMarkReady={handleMarkReady}
-                      userRole={userRole}
+                      userRole={selectedRole}
                     />
                   </TabPanel>
                   <TabPanel value={activeTab} index={1}>
@@ -482,7 +509,7 @@ export const MainPage = () => {
                       balloons={getFilteredReadyForPickupBalloons()}
                       showActions={true}
                       onPickup={handlePickup}
-                      userRole={userRole}
+                      userRole={selectedRole}
                     />
                   </TabPanel>
                   <TabPanel value={activeTab} index={2}>
@@ -490,7 +517,7 @@ export const MainPage = () => {
                       balloons={getFilteredPickedUpBalloons()}
                       showActions={true}
                       onDelivery={handleDelivery}
-                      userRole={userRole}
+                      userRole={selectedRole}
                     />
                   </TabPanel>
                   <TabPanel value={activeTab} index={3}>
@@ -498,7 +525,7 @@ export const MainPage = () => {
                       balloons={getFilteredDeliveredBalloons()}
                       showActions={true}
                       onRevert={handleRevert}
-                      userRole={userRole}
+                      userRole={selectedRole}
                     />
                   </TabPanel>
                 </>
@@ -511,11 +538,10 @@ export const MainPage = () => {
       <SettingsDialog
         open={settingsDialogOpen}
         userName={userName}
-        userRole={userRole}
+        userRole={selectedRole}
         onClose={handleCloseSettingsDialog}
         onSave={handleSaveSettings}
         onUserNameChange={setUserName}
-        onUserRoleChange={setUserRole}
       />
       <EnvironmentSwitcher />
     </Box>
