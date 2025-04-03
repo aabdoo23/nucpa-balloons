@@ -1,12 +1,12 @@
-import { Box, Paper, Grid, Typography, useTheme } from '@mui/material';
-import { ToiletRequestDTO, UserRole } from '../types';
+import { Box, Grid, Typography, useTheme } from '@mui/material';
+import { ToiletRequestDTO } from '../../types';
+import { StatCard } from './StatCard';
 
 interface ToiletRequestStatisticsProps {
   pendingRequests: ToiletRequestDTO[];
   inProgressRequests: ToiletRequestDTO[];
   completedRequests: ToiletRequestDTO[];
   userName: string;
-  userRole: UserRole;
 }
 
 export const ToiletRequestStatistics = ({
@@ -22,66 +22,6 @@ export const ToiletRequestStatistics = ({
   const activeRequests = pendingRequests.length + inProgressRequests.length;
   const myRequests = [...pendingRequests, ...inProgressRequests, ...completedRequests]
     .filter(req => req.statusChangedBy === userName).length;
-
-  const getPercentage = (value: number, total: number) => {
-    if (total === 0) return 0;
-    return Math.round((value / total) * 100);
-  };
-
-  const StatCard = ({ title, value, total, color }: { 
-    title: string; 
-    value: number;
-    total: number;
-    color: string;
-  }) => (
-    <Paper 
-      sx={{ 
-        p: 2, 
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
-        alignItems: 'center',
-        textAlign: 'center',
-        bgcolor: theme.palette.background.paper,
-        border: `1px solid ${theme.palette.divider}`,
-        transition: 'all 0.2s ease-in-out',
-        '&:hover': {
-          transform: 'translateY(-2px)',
-          boxShadow: theme.shadows[2],
-        },
-      }}
-    >
-      <Typography 
-        variant="h4" 
-        component="div" 
-        sx={{ 
-          color: color,
-          fontWeight: 'bold',
-          mb: 1,
-        }}
-      >
-        {value}
-      </Typography>
-      <Typography 
-        variant="subtitle1" 
-        sx={{ 
-          color: theme.palette.text.secondary,
-          mb: 0.5,
-        }}
-      >
-        {title}
-      </Typography>
-      <Typography 
-        variant="body2" 
-        sx={{ 
-          color: theme.palette.text.secondary,
-        }}
-      >
-        {getPercentage(value, total)}% of total
-      </Typography>
-    </Paper>
-  );
 
   return (
     <Box sx={{ mb: 4 }}>

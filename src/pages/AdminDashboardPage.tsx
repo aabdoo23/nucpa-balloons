@@ -127,7 +127,7 @@ export const AdminDashboardPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [userName, setUserName] = useState(() => localStorage.getItem('userName') || '');
-  const [selectedRole, setSelectedRole] = useState<UserRole>(() => localStorage.getItem('userRole') as UserRole || 'admin');
+  const [selectedRole] = useState<UserRole>(() => localStorage.getItem('userRole') as UserRole || 'admin');
 
   useEffect(() => {
     if (!userName || !selectedRole) {
