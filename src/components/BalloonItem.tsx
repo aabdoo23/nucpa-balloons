@@ -155,6 +155,13 @@ export const BalloonItem = ({
           <Divider sx={{ borderColor: alpha(balloonColor, 0.1) }} />
           
           <Stack spacing={1}>
+          <Typography 
+              variant="body1" 
+              fontWeight='medium'
+              sx={{ color: theme.palette.text.primary }}
+            >
+              Team Id: {balloon.teamId}
+            </Typography>
             <Typography 
               variant="body2" 
               sx={{ color: theme.palette.text.secondary }}
