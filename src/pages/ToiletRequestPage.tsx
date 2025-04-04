@@ -516,7 +516,8 @@ export const ToiletRequestPage = () => {
         </DialogActions>
       </Dialog>
 
-      <EnvironmentSwitcher />
+      {/* only show on development */}
+      {process.env.NODE_ENV === 'development' && <EnvironmentSwitcher />}
     </Box>
   );
 }; 

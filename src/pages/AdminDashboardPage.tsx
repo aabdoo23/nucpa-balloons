@@ -544,8 +544,8 @@ export const AdminDashboardPage = () => {
         onSave={handleSaveSettings}
         onUserNameChange={setUserName}
       />
-
-      <EnvironmentSwitcher />
+      {/* only show on development */}
+      {process.env.NODE_ENV === 'development' && <EnvironmentSwitcher />}
     </Box>
   );
 }; 
