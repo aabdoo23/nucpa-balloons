@@ -12,7 +12,6 @@ import {
   Button,
   useMediaQuery,
   FormControl,
-  InputLabel,
   Select,
   MenuItem,
   FormControlLabel,
@@ -30,7 +29,7 @@ import {
   AccountCircle as AccountCircleIcon,
 } from '@mui/icons-material';
 import { signalRService } from '../services/signalR';
-import { BalloonRequestDTO, UserRole, BalloonUpdates, Room } from '../types';
+import { BalloonRequestDTO, UserRole, BalloonUpdates } from '../types';
 import { 
   getPendingBalloons, 
   getPickedUpBalloons, 
@@ -189,7 +188,6 @@ export const MainPage = () => {
   const [readyForPickupBalloons, setReadyForPickupBalloons] = useState<BalloonRequestDTO[]>([]);
   const [pickedUpBalloons, setPickedUpBalloons] = useState<BalloonRequestDTO[]>([]);
   const [deliveredBalloons, setDeliveredBalloons] = useState<BalloonRequestDTO[]>([]);
-  const [rooms, setRooms] = useState<Room[]>([]);
   const [activeTab, setActiveTab] = useState(0);
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -241,7 +239,7 @@ export const MainPage = () => {
       setIsLoading(true);
       setError(null);
       try {
-        const [pending, readyForPickup, pickedUp, delivered, roomsData] = await Promise.all([
+        const [pending, readyForPickup, pickedUp, delivered] = await Promise.all([
           getPendingBalloons(),
           getReadyForPickupBalloons(),
           getPickedUpBalloons(),
@@ -253,7 +251,6 @@ export const MainPage = () => {
         setReadyForPickupBalloons(Array.isArray(readyForPickup) ? readyForPickup : []);
         setPickedUpBalloons(Array.isArray(pickedUp) ? pickedUp : []);
         setDeliveredBalloons(Array.isArray(delivered) ? delivered : []);
-        setRooms(Array.isArray(roomsData) ? roomsData : []);
       } catch (error) {
         console.error('Error loading initial data:', error);
         if (mounted) {
@@ -262,7 +259,6 @@ export const MainPage = () => {
           setReadyForPickupBalloons([]);
           setPickedUpBalloons([]);
           setDeliveredBalloons([]);
-          setRooms([]);
         }
       } finally {
         if (mounted) {
@@ -285,7 +281,7 @@ export const MainPage = () => {
   }, []);
 
   const refreshData = async () => {
-    const [pending, readyForPickup, pickedUp, delivered, roomsData] = await Promise.all([
+    const [pending, readyForPickup, pickedUp, delivered] = await Promise.all([
       getPendingBalloons(),
       getReadyForPickupBalloons(),
       getPickedUpBalloons(),
@@ -296,7 +292,6 @@ export const MainPage = () => {
     setReadyForPickupBalloons(Array.isArray(readyForPickup) ? readyForPickup : []);
     setPickedUpBalloons(Array.isArray(pickedUp) ? pickedUp : []);
     setDeliveredBalloons(Array.isArray(delivered) ? delivered : []);
-    setRooms(Array.isArray(roomsData) ? roomsData : []);
   };
 
   const handleMarkReady = async (balloon: BalloonRequestDTO) => {
