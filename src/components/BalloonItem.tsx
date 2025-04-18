@@ -16,22 +16,36 @@ import { BalloonRequestDTO, UserRole } from '../types';
 import { getRoomFromTeamName } from '../utils/roomMapping';
 
 const colorMap: { [key: string]: string } = {
-  purple: '#9c27b0',
-  red: '#f44336',
-  blue: '#2196f3',
-  green: '#4caf50',
-  yellow: '#ffeb3b',
-  orange: '#ff9800',
-  pink: '#e91e63',
-  brown: '#795548',
-  black: '#212121',
-  white: '#fafafa',
-  gray: '#9e9e9e',
-  cyan: '#00bcd4',
-  lime: '#cddc39',
-  indigo: '#3f51b5',
-  violet: '#9c27b0',
-  magenta: '#e91e63',
+  'purple': '#9c27b0',
+  'red': '#f44336',
+  'blue': '#2196f3',
+  'green': '#4caf50',
+  'yellow': '#ffeb3b',
+  'orange': '#ff9800',
+  'pink': '#e91e63',
+  'brown': '#795548',
+  'black': '#212121',
+  'white': '#fafafa',
+  'gray': '#9e9e9e',
+  'cyan': '#00bcd4',
+  'lime': '#cddc39',
+  'indigo': '#3f51b5',
+  'violet': '#9c27b0',
+  'magenta': '#e91e63',
+  'maroon': '#800000',
+  'navy': '#000080',
+  'teal': '#009688',
+  'turquoise': '#40e0d0',
+  'silver': '#c0c0c0',
+  'gold': '#ffd700',
+  'coral': '#ff7f50',
+  'khaki': '#f0e68c',
+  'olive': '#808000',
+  'fuchsia': '#f0f',
+  'aqua': '#0ff',
+  'azure': '#f0ffff',
+  'beige': '#f5f5dc',
+  
 };
 
 interface BalloonItemProps {
@@ -72,8 +86,20 @@ export const BalloonItem = ({
   };
 
   const getBalloonColor = (color: string): string => {
-    const normalizedColor = color.toLowerCase();
-    return colorMap[normalizedColor] || '#9e9e9e'; // fallback to grey if color not found
+    const normalizedColor = color.toLowerCase().trim();
+    
+    // First try exact match
+    if (colorMap[normalizedColor]) {
+      return colorMap[normalizedColor];
+    }
+    
+    // Then try to find a matching color (for variations like "Light Blue" vs "light blue")
+    const colorKey = Object.keys(colorMap).find(key => 
+      key.toLowerCase() === normalizedColor ||
+      normalizedColor.includes(key.toLowerCase())
+    );
+    
+    return colorKey ? colorMap[colorKey] : '#9e9e9e'; // fallback to grey if color not found
   };
 
   const balloonColor = getBalloonColor(balloon.balloonColor);
