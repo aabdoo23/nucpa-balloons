@@ -13,6 +13,7 @@ import {
   alpha,
 } from '@mui/material';
 import { BalloonRequestDTO, UserRole } from '../types';
+import { getRoomFromTeamName } from '../utils/roomMapping';
 
 const colorMap: { [key: string]: string } = {
   purple: '#9c27b0',
@@ -123,7 +124,7 @@ export const BalloonItem = ({
                 variant="outlined"
               />
               <Chip
-                label={`Room ${balloon.roomName}`}
+                label={`${getRoomFromTeamName(balloon.teamName)}`}
                 size={isMobile ? "medium" : "small"}
                 color="secondary"
                 variant="outlined"

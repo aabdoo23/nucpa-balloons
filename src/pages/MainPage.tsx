@@ -44,6 +44,7 @@ import { SettingsDialog } from '../components/SettingsDialog';
 import { EnvironmentSwitcher } from '../components/EnvironmentSwitcher';
 import { Statistics } from '../components/Statistics';
 import { lightTheme } from '../theme';
+import { getRoomFromTeamName } from '../utils/roomMapping';
 
 interface TeamBalloonStats {
   teamName: string;
@@ -392,7 +393,7 @@ export const MainPage = () => {
     let filtered = readyForPickupBalloons;
     
     if (selectedRoom) {
-      filtered = filtered.filter(balloon => balloon.roomName === selectedRoom);
+      filtered = filtered.filter(balloon => getRoomFromTeamName(balloon.teamName) === selectedRoom);
     }
     
     return filtered;
@@ -551,18 +552,22 @@ export const MainPage = () => {
                     fullWidth={isMobile} 
                     sx={{ minWidth: isMobile ? '100%' : 200 }}
                   >
-                    <InputLabel>Filter by Room</InputLabel>
                     <Select
                       value={selectedRoom}
                       label="Filter by Room"
                       onChange={(e) => setSelectedRoom(e.target.value)}
                     >
                       <MenuItem value="">All Rooms</MenuItem>
-                      {rooms.map((room) => (
-                        <MenuItem key={room.id} value={room.name}>
-                          Room {room.name}
-                        </MenuItem>
-                      ))}
+                      <MenuItem value="Lab-01">Lab-01</MenuItem>
+                      <MenuItem value="Lab-52">Lab-52</MenuItem>
+                      <MenuItem value="Lab-53">Lab-53</MenuItem>
+                      <MenuItem value="Lab-264">Lab-264</MenuItem>
+                      <MenuItem value="Lab-216-B">Lab-216-B</MenuItem>
+                      <MenuItem value="Lab-265">Lab-265</MenuItem>
+                      <MenuItem value="Lab-7">Lab-7</MenuItem>
+                      <MenuItem value="Lab-G29">Lab-G29</MenuItem>
+                      <MenuItem value="Lab-G18">Lab-G18</MenuItem>
+                      <MenuItem value="Lab-G17">Lab-G17</MenuItem>
                     </Select>
                   </FormControl>
                 )}
