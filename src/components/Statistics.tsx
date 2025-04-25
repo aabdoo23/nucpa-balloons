@@ -1,24 +1,6 @@
 import { Box, Grid, Paper, Typography, useTheme, alpha, Tooltip, Stack } from '@mui/material';
 import { BalloonRequestDTO } from '../types';
-
-const colorMap: { [key: string]: string } = {
-  purple: '#9c27b0',
-  red: '#f44336',
-  blue: '#2196f3',
-  green: '#4caf50',
-  yellow: '#ffeb3b',
-  orange: '#ff9800',
-  pink: '#e91e63',
-  brown: '#795548',
-  black: '#212121',
-  white: '#fafafa',
-  gray: '#9e9e9e',
-  cyan: '#00bcd4',
-  lime: '#cddc39',
-  indigo: '#3f51b5',
-  violet: '#9c27b0',
-  magenta: '#e91e63',
-};
+import { balloonColors, getBalloonColor } from '../config/colors';
 
 interface StatisticsProps {
   pendingBalloons: BalloonRequestDTO[];
@@ -44,13 +26,14 @@ export const Statistics = ({
 }: StatisticsProps) => {
   const theme = useTheme();
 
-  const allBalloons = [...pendingBalloons, ...readyForPickupBalloons, ...pickedUpBalloons, ...deliveredBalloons];
+  // Sort all balloons by timestamp from earliest to latest
+  const allBalloons = [
+    ...pendingBalloons,
+    ...readyForPickupBalloons,
+    ...pickedUpBalloons,
+    ...deliveredBalloons
+  ].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
   
-  const getBalloonColor = (color: string): string => {
-    const normalizedColor = color.toLowerCase();
-    return colorMap[normalizedColor] || '#9e9e9e'; // fallback to grey if color not found
-  };
-
   // Get color counts
   const colorCounts = allBalloons.reduce<ColorCount[]>((acc, balloon) => {
     const existingColor = acc.find(c => c.color.toLowerCase() === balloon.balloonColor.toLowerCase());
@@ -113,137 +96,69 @@ export const Statistics = ({
   ];
 
   return (
-    <Paper 
-      elevation={0} 
-      sx={{ 
-        p: 2, 
-        mb: 3,
-        bgcolor: alpha(theme.palette.primary.main, 0.02),
-      }}
-    >
+    <Paper sx={{ p: 2, mb: 3 }}>
+      <Typography variant="h6" gutterBottom>
+        Statistics
+      </Typography>
       <Grid container spacing={2}>
-        {/* Main stats */}
-        <Grid item xs={12} md={4}>
-          <Stack direction="row" spacing={2} justifyContent="center">
-            {stats.map((stat) => (
-              <Tooltip key={stat.title} title={stat.tooltip}>
-                <Paper
-                  elevation={0}
-                  sx={{
-                    px: 2,
-                    py: 1,
-                    textAlign: 'center',
-                    bgcolor: alpha(stat.color, 0.05),
-                    flex: 1,
-                  }}
-                >
-                  <Typography 
-                    variant="h6" 
-                    sx={{ 
-                      color: stat.color,
-                      fontWeight: 'bold',
-                      lineHeight: 1,
-                    }}
-                  >
-                    {stat.count}
-                  </Typography>
-                  <Typography 
-                    variant="caption" 
-                    sx={{ 
-                      color: theme.palette.text.secondary,
-                      fontWeight: 'medium',
-                    }}
-                  >
-                    {stat.title}
-                  </Typography>
-                </Paper>
-              </Tooltip>
-            ))}
-          </Stack>
-        </Grid>
-
-        {/* Color distribution */}
-        <Grid item xs={12} md={5}>
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, justifyContent: 'center' }}>
-            {colorCounts.map(({ color, count }) => {
-              const hexColor = getBalloonColor(color);
-              return (
-                <Tooltip key={color} title={`${color} Balloons`}>
-                  <Paper
-                    elevation={0}
-                    sx={{
-                      px: 1.5,
-                      py: 0.5,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 1,
-                      bgcolor: alpha(hexColor, 0.1),
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        width: 12,
-                        height: 12,
-                        borderRadius: '50%',
-                        bgcolor: hexColor,
-                      }}
-                    />
-                    <Typography 
-                      variant="caption" 
-                      sx={{ 
-                        fontWeight: 'medium',
-                        color: theme.palette.text.primary,
-                      }}
-                    >
-                      {count}
-                    </Typography>
-                  </Paper>
-                </Tooltip>
-              );
-            })}
-          </Box>
-        </Grid>
-
-        {/* Personal stats */}
-        <Grid item xs={12} md={3}>
-          <Stack direction="row" spacing={1} justifyContent="center">
-            {myStats.map((stat) => (
-              <Tooltip key={stat.title} title={stat.title}>
-                <Paper
-                  elevation={0}
-                  sx={{
-                    px: 2,
-                    py: 1,
-                    textAlign: 'center',
-                    bgcolor: alpha(stat.color, 0.05),
-                    flex: 1,
-                  }}
-                >
-                  <Typography 
-                    variant="h6" 
-                    sx={{ 
-                      color: stat.color,
-                      fontWeight: 'bold',
-                      lineHeight: 1,
-                    }}
-                  >
-                    {stat.count}
-                  </Typography>
-                  <Typography 
-                    variant="caption" 
-                    sx={{ 
-                      color: theme.palette.text.secondary,
-                      fontWeight: 'medium',
-                    }}
-                  >
-                    {stat.title.split(' ')[1]}
-                  </Typography>
-                </Paper>
-              </Tooltip>
-            ))}
-          </Stack>
-        </Grid>
+        {stats.map((stat) => (
+          <Grid item xs={12} sm={6} md={3} key={stat.title}>
+            <Tooltip title={stat.tooltip}>
+              <Paper
+                sx={{
+                  p: 2,
+                  textAlign: 'center',
+                  bgcolor: alpha(stat.color, 0.1),
+                  border: `1px solid ${alpha(stat.color, 0.2)}`,
+                }}
+              >
+                <Typography variant="h6" color="text.secondary">
+                  {stat.title}
+                </Typography>
+                <Typography variant="h4" color={stat.color} fontWeight="bold">
+                  {stat.count}
+                </Typography>
+              </Paper>
+            </Tooltip>
+          </Grid>
+        ))}
       </Grid>
+      {colorCounts.length > 0 && (
+        <Box sx={{ mt: 3 }}>
+          <Typography variant="subtitle1" gutterBottom>
+            Balloons by Color
+          </Typography>
+          <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
+            {colorCounts.map(({ color, count }) => (
+              <Tooltip key={color} title={`${count} ${color} balloons`}>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1,
+                    p: 1,
+                    borderRadius: 1,
+                    bgcolor: alpha(getBalloonColor(color), 0.1),
+                    border: `1px solid ${alpha(getBalloonColor(color), 0.2)}`,
+                  }}
+                >
+                  <Box
+                    sx={{
+                      width: 16,
+                      height: 16,
+                      borderRadius: '50%',
+                      bgcolor: getBalloonColor(color),
+                    }}
+                  />
+                  <Typography variant="body2">
+                    {color} ({count})
+                  </Typography>
+                </Box>
+              </Tooltip>
+            ))}
+          </Stack>
+        </Box>
+      )}
     </Paper>
   );
 }; 

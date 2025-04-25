@@ -14,17 +14,14 @@ export const environments: { [key: string]: Environment } = {
   }
 };
 
-// Get current environment from localStorage or default to production
 export const getCurrentEnvironment = (): Environment => {
   const envName = localStorage.getItem('selectedEnvironment') || 'production';
   return environments[envName];
 };
 
-// Set current environment
 export const setCurrentEnvironment = (envName: string): void => {
   if (environments[envName]) {
     localStorage.setItem('selectedEnvironment', envName);
-    // Reload the page to apply new environment
     window.location.reload();
   }
 }; 

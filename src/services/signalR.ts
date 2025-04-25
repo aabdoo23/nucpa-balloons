@@ -1,4 +1,4 @@
-import { HubConnectionBuilder, HubConnection, HttpTransportType } from '@microsoft/signalr';
+import { HubConnectionBuilder, HubConnection, HttpTransportType, LogLevel } from '@microsoft/signalr';
 import { BalloonRequestDTO, BalloonUpdates, ToiletRequestUpdates, ToiletRequestDTO } from '../types';
 import { API_BASE_URL } from '../config';
 
@@ -51,6 +51,7 @@ class SignalRService {
           skipNegotiation: true,
           transport: HttpTransportType.WebSockets
         })
+        .configureLogging(LogLevel.Information)
         .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
         .build();
 
@@ -198,6 +199,34 @@ class SignalRService {
 
   public isConnected(): boolean {
     return this.connection?.state === 'Connected';
+  }
+
+  public onReceiveAnnouncement(callback: (message: string) => void) {
+    if (!this.connection) {
+      console.error('Cannot register callback: SignalR connection not established');
+      return;
+    }
+
+    console.log('Registering ReceiveAnnouncement callback...');
+    this.connection.on('ReceiveAnnouncement', callback);
+    console.log('ReceiveAnnouncement callback registered');
+  }
+
+  public offReceiveAnnouncement(callback: (message: string) => void) {
+    if (!this.connection) {
+      console.error('Cannot unregister callback: SignalR connection not established');
+      return;
+    }
+
+    this.connection.off('ReceiveAnnouncement', callback);
+    console.log('Unregistered ReceiveAnnouncement callback');
+  }
+
+  public async sendAnnouncement(message: string) {
+    if (!this.connection) {
+      throw new Error('SignalR connection not established');
+    }
+    await this.connection.invoke('SendAnnouncement', message);
   }
 }
 

@@ -5,7 +5,6 @@ import AdminSettingsPage from './pages/AdminSettingsPage';
 import { LoginPage } from './pages/LoginPage';
 import { Navbar } from './components/Navbar';
 import { ToiletRequestPage } from './pages/ToiletRequestPage';
-import { AdminDashboardPage } from './pages/AdminDashboardPage';
 const theme = createTheme({
   palette: {
     primary: {
@@ -35,14 +34,6 @@ function App() {
             element={
               <PrivateRoute>
                 <AdminSettingsPage />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/adminDashboard"
-            element={
-              <PrivateRoute>
-                <AdminDashboardPage />
               </PrivateRoute>
             }
           />

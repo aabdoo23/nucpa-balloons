@@ -26,9 +26,6 @@ export const Navbar = () => {
               <Button color="inherit" component={RouterLink} to="/admin">
                 Admin Settings
               </Button>
-              <Button color="inherit" component={RouterLink} to="/adminDashboard">
-                Admin Dashboard
-              </Button>
               <Button color="inherit" onClick={handleLogout}>
                 Logout
               </Button>

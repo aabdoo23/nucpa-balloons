@@ -23,10 +23,14 @@ import {
   List,
   ListItem,
   ListItemText,
+  Collapse,
+  IconButton,
 } from '@mui/material';
 import { 
   Settings as SettingsIcon, 
   AccountCircle as AccountCircleIcon,
+  ExpandMore as ExpandMoreIcon,
+  ExpandLess as ExpandLessIcon,
 } from '@mui/icons-material';
 import { signalRService } from '../services/signalR';
 import { BalloonRequestDTO, UserRole, BalloonUpdates } from '../types';
@@ -43,7 +47,10 @@ import { SettingsDialog } from '../components/SettingsDialog';
 import { EnvironmentSwitcher } from '../components/EnvironmentSwitcher';
 import { Statistics } from '../components/Statistics';
 import { lightTheme } from '../theme';
-import { getRoomFromTeamName } from '../utils/roomMapping';
+import { getRoomFromTeamName } from '../config/roomMapping';
+import { ColorBalloonList } from '../components/ColorBalloonList';
+import { AnnouncementDialog } from '../components/AnnouncementDialog';
+import { AnnouncementSender } from '../components/AnnouncementSender';
 
 interface TeamBalloonStats {
   teamName: string;
@@ -55,6 +62,8 @@ interface TeamBalloonStats {
 }
 
 const TeamStatistics = ({ balloons }: { balloons: BalloonRequestDTO[] }) => {
+  const [expanded, setExpanded] = useState(false);
+
   const teamStats = balloons.reduce((acc, balloon) => {
     const teamName = balloon.teamName || 'Unknown Team';
     if (!acc[teamName]) {
@@ -91,66 +100,78 @@ const TeamStatistics = ({ balloons }: { balloons: BalloonRequestDTO[] }) => {
 
   return (
     <Paper sx={{ p: 2, mb: 3 }}>
-      <Typography variant="h6" gutterBottom>
-        Team Statistics
-      </Typography>
-      <List>
-        {sortedTeams.map((team) => (
-          <ListItem
-            key={team.teamName}
-            sx={{
-              border: '1px solid',
-              borderColor: 'divider',
-              borderRadius: 1,
-              mb: 1,
-              bgcolor: 'background.paper',
-            }}
-          >
-            <ListItemText
-              primary={
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
-                    {team.teamName}
-                  </Typography>
-                  <Chip
-                    label={`Total: ${team.total}`}
-                    color="primary"
-                    size="small"
-                  />
-                </Box>
-              }
-              secondary={
-                <Box sx={{ display: 'flex', gap: 1, mt: 1, flexWrap: 'wrap' }}>
-                  <Chip
-                    label={`Pending: ${team.pending}`}
-                    size="small"
-                    variant="outlined"
-                    color="default"
-                  />
-                  <Chip
-                    label={`Ready: ${team.readyForPickup}`}
-                    size="small"
-                    variant="outlined"
-                    color="warning"
-                  />
-                  <Chip
-                    label={`Picked Up: ${team.pickedUp}`}
-                    size="small"
-                    variant="outlined"
-                    color="info"
-                  />
-                  <Chip
-                    label={`Delivered: ${team.delivered}`}
-                    size="small"
-                    variant="outlined"
-                    color="success"
-                  />
-                </Box>
-              }
-            />
-          </ListItem>
-        ))}
-      </List>
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+        mb: expanded ? 2 : 0
+      }}>
+        <Typography variant="h6">
+          Team Statistics
+        </Typography>
+        <IconButton onClick={() => setExpanded(!expanded)}>
+          {expanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+        </IconButton>
+      </Box>
+      <Collapse in={expanded}>
+        <List>
+          {sortedTeams.map((team) => (
+            <ListItem
+              key={team.teamName}
+              sx={{
+                border: '1px solid',
+                borderColor: 'divider',
+                borderRadius: 1,
+                mb: 1,
+                bgcolor: 'background.paper',
+              }}
+            >
+              <ListItemText
+                primary={
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+                      {team.teamName}
+                    </Typography>
+                    <Chip
+                      label={`Total: ${team.total}`}
+                      color="primary"
+                      size="small"
+                    />
+                  </Box>
+                }
+                secondary={
+                  <Box sx={{ display: 'flex', gap: 1, mt: 1, flexWrap: 'wrap' }}>
+                    <Chip
+                      label={`Pending: ${team.pending}`}
+                      size="small"
+                      variant="outlined"
+                      color="default"
+                    />
+                    <Chip
+                      label={`Ready: ${team.readyForPickup}`}
+                      size="small"
+                      variant="outlined"
+                      color="warning"
+                    />
+                    <Chip
+                      label={`Picked Up: ${team.pickedUp}`}
+                      size="small"
+                      variant="outlined"
+                      color="info"
+                    />
+                    <Chip
+                      label={`Delivered: ${team.delivered}`}
+                      size="small"
+                      variant="outlined"
+                      color="success"
+                    />
+                  </Box>
+                }
+              />
+            </ListItem>
+          ))}
+        </List>
+      </Collapse>
     </Paper>
   );
 };
@@ -199,6 +220,8 @@ export const MainPage = () => {
   // Filter states
   const [selectedRoom, setSelectedRoom] = useState<string>('');
   const [showOnlyMyBalloons, setShowOnlyMyBalloons] = useState(true);
+  const [announcement, setAnnouncement] = useState<string | null>(null);
+  const [showAnnouncement, setShowAnnouncement] = useState(false);
 
   useEffect(() => {
     // Show settings dialog if no name or role is set
@@ -219,12 +242,19 @@ export const MainPage = () => {
       if (Array.isArray(updates.Delivered)) setDeliveredBalloons(updates.Delivered);
     };
 
+    const handleAnnouncement = (message: string) => {
+      if (!mounted) return;
+      setAnnouncement(message);
+      setShowAnnouncement(true);
+    };
+
     const initializeSignalR = async () => {
       try {
         await signalRService.startConnection();
         if (mounted) {
           signalRService.onBalloonStatusChanged(handleBalloonStatusChange);
           signalRService.onReceiveBalloonUpdates(handleBalloonStatusChange);
+          signalRService.onReceiveAnnouncement(handleAnnouncement);
         }
       } catch (error) {
         console.error('Failed to initialize SignalR:', error);
@@ -275,6 +305,7 @@ export const MainPage = () => {
       if (signalRService.isConnected()) {
         signalRService.offBalloonStatusChanged(handleBalloonStatusChange);
         signalRService.offReceiveBalloonUpdates(handleBalloonStatusChange);
+        signalRService.offReceiveAnnouncement(handleAnnouncement);
         signalRService.stopConnection();
       }
     };
@@ -346,6 +377,32 @@ export const MainPage = () => {
     }
   };
 
+  const handleRevertToReady = async (balloon: BalloonRequestDTO) => {
+    try {
+      await updateBalloonStatus(balloon.id, {
+        id: balloon.id,
+        status: 'ReadyForPickup',
+        statusChangedBy: userName
+      });
+    } catch (error) {
+      console.error('Error reverting balloon to ready:', error);
+      await refreshData();
+    }
+  };
+
+  const handleRevertToPending = async (balloon: BalloonRequestDTO) => {
+    try {
+      await updateBalloonStatus(balloon.id, {
+        id: balloon.id,
+        status: 'Pending',
+        statusChangedBy: userName
+      });
+    } catch (error) {
+      console.error('Error reverting balloon to pending:', error);
+      await refreshData();
+    }
+  };
+
   const handleOpenSettingsDialog = () => {
     setSettingsDialogOpen(true);
   };
@@ -384,28 +441,12 @@ export const MainPage = () => {
   };
 
   // Filter functions
-  const getFilteredReadyForPickupBalloons = () => {
-    let filtered = readyForPickupBalloons;
+  const getFilteredBalloons = (balloons: BalloonRequestDTO[]) => {
+    let filtered = balloons;
     
     if (selectedRoom) {
       filtered = filtered.filter(balloon => getRoomFromTeamName(balloon.teamName) === selectedRoom);
     }
-    
-    return filtered;
-  };
-
-  const getFilteredPickedUpBalloons = () => {
-    let filtered = pickedUpBalloons;
-    
-    if (showOnlyMyBalloons) {
-      filtered = filtered.filter(balloon => balloon.statusChangedBy === userName);
-    }
-    
-    return filtered;
-  };
-
-  const getFilteredDeliveredBalloons = () => {
-    let filtered = deliveredBalloons;
     
     if (showOnlyMyBalloons) {
       filtered = filtered.filter(balloon => balloon.statusChangedBy === userName);
@@ -467,6 +508,7 @@ export const MainPage = () => {
               <MenuItem onClick={() => handleRoleChange('balloonPrep')}>Balloon Prep</MenuItem>
               <MenuItem onClick={() => handleRoleChange('accompanier')}>Accompanier</MenuItem>
             </Menu>
+            {selectedRole === 'admin' && <AnnouncementSender />}
             <Tooltip title="Settings">
               <MuiIconButton onClick={handleOpenSettingsDialog} color="inherit">
                 <SettingsIcon />
@@ -542,40 +584,40 @@ export const MainPage = () => {
                 gap: 2,
                 alignItems: isMobile ? 'stretch' : 'center'
               }}>
-                {selectedRole === 'courier' && activeTab === 0 && (
-                  <FormControl 
-                    fullWidth={isMobile} 
-                    sx={{ minWidth: isMobile ? '100%' : 200 }}
-                  >
-                    <Select
-                      value={selectedRoom}
-                      label="Filter by Room"
-                      onChange={(e) => setSelectedRoom(e.target.value)}
+                {selectedRole === 'courier' && (
+                  <>
+                    <FormControl 
+                      fullWidth={isMobile} 
+                      sx={{ minWidth: isMobile ? '100%' : 200 }}
                     >
-                      <MenuItem value="">All Rooms</MenuItem>
-                      <MenuItem value="Lab-01">Lab-01</MenuItem>
-                      <MenuItem value="Lab-52">Lab-52</MenuItem>
-                      <MenuItem value="Lab-53">Lab-53</MenuItem>
-                      <MenuItem value="Lab-264">Lab-264</MenuItem>
-                      <MenuItem value="Lab-216-B">Lab-216-B</MenuItem>
-                      <MenuItem value="Lab-265">Lab-265</MenuItem>
-                      <MenuItem value="Lab-7">Lab-7</MenuItem>
-                      <MenuItem value="Lab-G29">Lab-G29</MenuItem>
-                      <MenuItem value="Lab-G18">Lab-G18</MenuItem>
-                      <MenuItem value="Lab-G17">Lab-G17</MenuItem>
-                    </Select>
-                  </FormControl>
-                )}
-                {selectedRole === 'courier' && (activeTab === 1 || activeTab === 2) && (
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={showOnlyMyBalloons}
-                        onChange={(e) => setShowOnlyMyBalloons(e.target.checked)}
-                      />
-                    }
-                    label="Show only my balloons"
-                  />
+                      <Select
+                        value={selectedRoom}
+                        label="Filter by Room"
+                        onChange={(e) => setSelectedRoom(e.target.value)}
+                      >
+                        <MenuItem value="">All Rooms</MenuItem>
+                        <MenuItem value="Lab-01">Lab-01</MenuItem>
+                        <MenuItem value="Lab-52">Lab-52</MenuItem>
+                        <MenuItem value="Lab-53">Lab-53</MenuItem>
+                        <MenuItem value="Lab-264">Lab-264</MenuItem>
+                        <MenuItem value="Lab-216-B">Lab-216-B</MenuItem>
+                        <MenuItem value="Lab-265">Lab-265</MenuItem>
+                        <MenuItem value="Lab-7">Lab-7</MenuItem>
+                        <MenuItem value="Lab-G29">Lab-G29</MenuItem>
+                        <MenuItem value="Lab-G18">Lab-G18</MenuItem>
+                        <MenuItem value="Lab-G17">Lab-G17</MenuItem>
+                      </Select>
+                    </FormControl>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={showOnlyMyBalloons}
+                          onChange={(e) => setShowOnlyMyBalloons(e.target.checked)}
+                        />
+                      }
+                      label="Show only my balloons"
+                    />
+                  </>
                 )}
               </Box>
 
@@ -584,23 +626,25 @@ export const MainPage = () => {
                 <>
                   <TabPanel value={activeTab} index={0}>
                     <BalloonList
-                      balloons={getFilteredReadyForPickupBalloons()}
+                      balloons={getFilteredBalloons(readyForPickupBalloons)}
                       showActions={true}
                       onPickup={handlePickup}
+                      onRevertToPending={handleRevertToPending}
                       userRole={selectedRole}
                     />
                   </TabPanel>
                   <TabPanel value={activeTab} index={1}>
                     <BalloonList
-                      balloons={getFilteredPickedUpBalloons()}
+                      balloons={getFilteredBalloons(pickedUpBalloons)}
                       showActions={true}
                       onDelivery={handleDelivery}
+                      onRevertToReady={handleRevertToReady}
                       userRole={selectedRole}
                     />
                   </TabPanel>
                   <TabPanel value={activeTab} index={2}>
                     <BalloonList
-                      balloons={getFilteredDeliveredBalloons()}
+                      balloons={getFilteredBalloons(deliveredBalloons)}
                       showActions={true}
                       onRevert={handleRevert}
                       userRole={selectedRole}
@@ -610,32 +654,41 @@ export const MainPage = () => {
               ) : (
                 <>
                   <TabPanel value={activeTab} index={0}>
-                    <BalloonList
-                      balloons={pendingBalloons}
-                      showActions={true}
-                      onMarkReady={handleMarkReady}
-                      userRole={selectedRole}
-                    />
+                    {selectedRole === 'balloonPrep' ? (
+                      <ColorBalloonList
+                        balloons={pendingBalloons}
+                        onMarkReady={handleMarkReady}
+                      />
+                    ) : (
+                      <BalloonList
+                        balloons={pendingBalloons}
+                        showActions={true}
+                        onMarkReady={handleMarkReady}
+                        userRole={selectedRole}
+                      />
+                    )}
                   </TabPanel>
                   <TabPanel value={activeTab} index={1}>
                     <BalloonList
-                      balloons={getFilteredReadyForPickupBalloons()}
+                      balloons={getFilteredBalloons(readyForPickupBalloons)}
                       showActions={true}
                       onPickup={handlePickup}
+                      onRevertToPending={handleRevertToPending}
                       userRole={selectedRole}
                     />
                   </TabPanel>
                   <TabPanel value={activeTab} index={2}>
                     <BalloonList
-                      balloons={getFilteredPickedUpBalloons()}
+                      balloons={getFilteredBalloons(pickedUpBalloons)}
                       showActions={true}
                       onDelivery={handleDelivery}
+                      onRevertToReady={handleRevertToReady}
                       userRole={selectedRole}
                     />
                   </TabPanel>
                   <TabPanel value={activeTab} index={3}>
                     <BalloonList
-                      balloons={getFilteredDeliveredBalloons()}
+                      balloons={getFilteredBalloons(deliveredBalloons)}
                       showActions={true}
                       onRevert={handleRevert}
                       userRole={selectedRole}
@@ -644,7 +697,7 @@ export const MainPage = () => {
                 </>
               )}
             </Paper>
-
+                
             <TeamStatistics 
               balloons={[
                 ...pendingBalloons,
@@ -664,6 +717,11 @@ export const MainPage = () => {
         onClose={handleCloseSettingsDialog}
         onSave={handleSaveSettings}
         onUserNameChange={setUserName}
+      />
+      <AnnouncementDialog
+        open={showAnnouncement}
+        message={announcement || ''}
+        onClose={() => setShowAnnouncement(false)}
       />
       {/* only show on development */}
       {process.env.NODE_ENV === 'development' && <EnvironmentSwitcher />}

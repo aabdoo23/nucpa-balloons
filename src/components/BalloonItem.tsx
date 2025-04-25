@@ -13,40 +13,8 @@ import {
   alpha,
 } from '@mui/material';
 import { BalloonRequestDTO, UserRole } from '../types';
-import { getRoomFromTeamName } from '../utils/roomMapping';
-
-const colorMap: { [key: string]: string } = {
-  'purple': '#9c27b0',
-  'red': '#f44336',
-  'blue': '#2196f3',
-  'green': '#4caf50',
-  'yellow': '#ffeb3b',
-  'orange': '#ff9800',
-  'pink': '#e91e63',
-  'brown': '#795548',
-  'black': '#212121',
-  'white': '#fafafa',
-  'gray': '#9e9e9e',
-  'cyan': '#00bcd4',
-  'lime': '#cddc39',
-  'indigo': '#3f51b5',
-  'violet': '#9c27b0',
-  'magenta': '#e91e63',
-  'maroon': '#800000',
-  'navy': '#000080',
-  'teal': '#009688',
-  'turquoise': '#40e0d0',
-  'silver': '#c0c0c0',
-  'gold': '#ffd700',
-  'coral': '#ff7f50',
-  'khaki': '#f0e68c',
-  'olive': '#808000',
-  'fuchsia': '#f0f',
-  'aqua': '#0ff',
-  'azure': '#f0ffff',
-  'beige': '#f5f5dc',
-  
-};
+import { getRoomFromTeamName } from '../config/roomMapping';
+import { getBalloonColor, getStatusColor } from '../config/colors';
 
 interface BalloonItemProps {
   balloon: BalloonRequestDTO;
@@ -56,6 +24,8 @@ interface BalloonItemProps {
   onPickup?: (balloon: BalloonRequestDTO) => void;
   onDelivery?: (balloon: BalloonRequestDTO) => void;
   onRevert?: (balloon: BalloonRequestDTO) => void;
+  onRevertToReady?: (balloon: BalloonRequestDTO) => void;
+  onRevertToPending?: (balloon: BalloonRequestDTO) => void;
 }
 
 export const BalloonItem = ({
@@ -66,41 +36,11 @@ export const BalloonItem = ({
   onPickup,
   onDelivery,
   onRevert,
+  onRevertToReady,
+  onRevertToPending,
 }: BalloonItemProps) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Pending':
-        return theme.palette.grey[600];
-      case 'ReadyForPickup':
-        return theme.palette.warning.main;
-      case 'PickedUp':
-        return theme.palette.info.main;
-      case 'Delivered':
-        return theme.palette.success.main;
-      default:
-        return theme.palette.grey[600];
-    }
-  };
-
-  const getBalloonColor = (color: string): string => {
-    const normalizedColor = color.toLowerCase().trim();
-    
-    // First try exact match
-    if (colorMap[normalizedColor]) {
-      return colorMap[normalizedColor];
-    }
-    
-    // Then try to find a matching color (for variations like "Light Blue" vs "light blue")
-    const colorKey = Object.keys(colorMap).find(key => 
-      key.toLowerCase() === normalizedColor ||
-      normalizedColor.includes(key.toLowerCase())
-    );
-    
-    return colorKey ? colorMap[colorKey] : '#9e9e9e'; // fallback to grey if color not found
-  };
 
   const balloonColor = getBalloonColor(balloon.balloonColor);
 
@@ -182,7 +122,7 @@ export const BalloonItem = ({
           <Divider sx={{ borderColor: alpha(balloonColor, 0.1) }} />
           
           <Stack spacing={1}>
-          <Typography 
+            <Typography 
               variant="body1" 
               fontWeight='medium'
               sx={{ color: theme.palette.text.primary }}
@@ -228,9 +168,60 @@ export const BalloonItem = ({
             gap: isMobile ? 1 : 0
           }}
         >
-          {userRole === 'balloonPrep' && balloon.status === 'Pending' && onMarkReady && (
+          
+          {userRole === 'courier' && balloon.status === 'Delivered' && onRevert && (
+            <Button
+              variant="contained"
+              color="warning"
+              onClick={() => onRevert(balloon)}
+              fullWidth={isMobile}
+              sx={{ mr: isMobile ? 0 : 1 }}
+            >
+              Revert to Picked Up
+            </Button>
+          )}
+          {/* Revert buttons */}
+          {userRole === 'courier' && balloon.status === 'PickedUp' && onRevertToReady && (
             <Button
               variant="outlined"
+              color="warning"
+              onClick={() => onRevertToReady(balloon)}
+              fullWidth={isMobile}
+              sx={{ 
+                mr: isMobile ? 0 : 1,
+                borderColor: theme.palette.warning.light,
+                color: theme.palette.warning.dark,
+                '&:hover': {
+                  borderColor: theme.palette.warning.main,
+                  backgroundColor: alpha(theme.palette.warning.light, 0.1),
+                }
+              }}
+            >
+              Revert to Ready
+            </Button>
+          )}
+          {userRole === 'courier' && balloon.status === 'ReadyForPickup' && onRevertToPending && (
+            <Button
+              variant="outlined"
+              color="warning"
+              onClick={() => onRevertToPending(balloon)}
+              fullWidth={isMobile}
+              sx={{ 
+                mr: isMobile ? 0 : 1,
+                borderColor: theme.palette.warning.light,
+                color: theme.palette.warning.dark,
+                '&:hover': {
+                  borderColor: theme.palette.warning.main,
+                  backgroundColor: alpha(theme.palette.warning.light, 0.1),
+                }
+              }}
+            >
+              Revert to Pending
+            </Button>
+          )}
+          {userRole === 'balloonPrep' && balloon.status === 'Pending' && onMarkReady && (
+            <Button
+              variant="contained"
               color="warning"
               onClick={() => onMarkReady(balloon)}
               fullWidth={isMobile}
@@ -241,7 +232,7 @@ export const BalloonItem = ({
           )}
           {userRole === 'courier' && balloon.status === 'ReadyForPickup' && onPickup && (
             <Button
-              variant="outlined"
+              variant="contained"
               color="primary"
               onClick={() => onPickup(balloon)}
               fullWidth={isMobile}
@@ -252,22 +243,13 @@ export const BalloonItem = ({
           )}
           {userRole === 'courier' && balloon.status === 'PickedUp' && onDelivery && (
             <Button
-              variant="outlined"
+              variant="contained"
               color="success"
               onClick={() => onDelivery(balloon)}
               fullWidth={isMobile}
+              sx={{ mr: isMobile ? 0 : 1 }}
             >
               Deliver
-            </Button>
-          )}
-          {userRole === 'courier' && balloon.status === 'Delivered' && onRevert && (
-            <Button
-              variant="outlined"
-              color="warning"
-              onClick={() => onRevert(balloon)}
-              fullWidth={isMobile}
-            >
-              Revert to Picked Up
             </Button>
           )}
         </CardActions>
