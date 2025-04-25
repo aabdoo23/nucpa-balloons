@@ -1,6 +1,6 @@
 import { Box, Button, Card, CardContent, Typography, useTheme } from '@mui/material';
 import { BalloonRequestDTO } from '../types';
-import { balloonColors, getBalloonColor } from '../config/colors';
+import { getBalloonColor } from '../config/colors';
 
 interface ColorBalloonListProps {
   balloons: BalloonRequestDTO[];

@@ -551,7 +551,6 @@ export const MainPage = () => {
               readyForPickupBalloons={readyForPickupBalloons}
               pickedUpBalloons={pickedUpBalloons}
               deliveredBalloons={deliveredBalloons}
-              userName={userName}
               userRole={selectedRole}
             />
 

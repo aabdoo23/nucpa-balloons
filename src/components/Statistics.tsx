@@ -1,13 +1,12 @@
 import { Box, Grid, Paper, Typography, useTheme, alpha, Tooltip, Stack } from '@mui/material';
 import { BalloonRequestDTO } from '../types';
-import { balloonColors, getBalloonColor } from '../config/colors';
+import { getBalloonColor } from '../config/colors';
 
 interface StatisticsProps {
   pendingBalloons: BalloonRequestDTO[];
   readyForPickupBalloons: BalloonRequestDTO[];
   pickedUpBalloons: BalloonRequestDTO[];
   deliveredBalloons: BalloonRequestDTO[];
-  userName: string;
   userRole: string;
 }
 
@@ -21,7 +20,6 @@ export const Statistics = ({
   readyForPickupBalloons,
   pickedUpBalloons,
   deliveredBalloons,
-  userName,
   userRole,
 }: StatisticsProps) => {
   const theme = useTheme();
@@ -79,19 +77,6 @@ export const Statistics = ({
       count: deliveredBalloons.length,
       color: theme.palette.success.main,
       tooltip: 'Successfully delivered balloons',
-    },
-  ];
-
-  const myStats = [
-    {
-      title: 'My Pickups',
-      count: pickedUpBalloons.filter(b => b.statusChangedBy === userName).length,
-      color: theme.palette.primary.main,
-    },
-    {
-      title: 'My Deliveries',
-      count: deliveredBalloons.filter(b => b.statusChangedBy === userName).length,
-      color: theme.palette.success.main,
     },
   ];
 
